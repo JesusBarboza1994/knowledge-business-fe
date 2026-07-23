@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   extractWikiLinks,
+  extractNoteLinks,
   markdownWithWikiLinks,
   noteReferenceFromHref,
   resolveInternalNoteHref,
@@ -20,6 +21,39 @@ describe('wiki helpers', () => {
     const links = extractWikiLinks('Ver [[Arquitectura actual]] y [[Nota futura]].', initialNotes)
     expect(links[0].target?.slug).toBe('arquitectura-actual')
     expect(links[1].target).toBeUndefined()
+  })
+
+  it('usa el target id autoritativo cuando el texto del enlace no coincide con el slug', () => {
+    const target = initialNotes.find((note) => note.slug === 'arquitectura-actual')!
+    const source = {
+      ...initialNotes[0],
+      body: 'Ver [[Arquitectura técnica]].',
+      outlinks: [{
+        display: 'Arquitectura técnica',
+        targetId: target.id,
+        targetSlug: target.slug,
+        access: 'accessible' as const,
+      }],
+    }
+
+    expect(extractNoteLinks(source, initialNotes).at(0)?.target?.id).toBe(target.id)
+  })
+
+  it('diferencia una conexión restringida de una referencia inexistente', () => {
+    const source = {
+      ...initialNotes[0],
+      body: 'Ver 🔒 *[restricted]*.',
+      outlinks: [{
+        display: 'Plan confidencial',
+        access: 'restricted' as const,
+      }],
+    }
+
+    expect(extractNoteLinks(source, initialNotes).at(0)).toMatchObject({
+      title: 'Plan confidencial',
+      restricted: true,
+      target: undefined,
+    })
   })
 
   it('deduplica enlaces por título', () => {

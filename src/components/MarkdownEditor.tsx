@@ -5,7 +5,7 @@ import { autocompletion, type CompletionContext } from '@codemirror/autocomplete
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Check, ChevronDown, Columns2, Eye, FileClock, Pencil, Save, TriangleAlert } from 'lucide-react'
-import { markdownWithWikiLinks, noteReferenceFromHref, resolveInternalNoteHref, wikiLinkCompletion } from '../lib/wiki'
+import { markdownWithWikiLinks, noteReferenceFromHref, resolveNoteHref, wikiLinkCompletion } from '../lib/wiki'
 import { api } from '../services/api'
 import type { Area, Note, NoteVersion, Sensitivity } from '../types'
 
@@ -126,14 +126,15 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
               components={{
                 a: ({ href, children }) => {
                   const reference = noteReferenceFromHref(href)
-                  const target = resolveInternalNoteHref(href, notes)
+                  const link = resolveNoteHref(href, note, notes)
+                  const target = link?.target
                   if (reference) {
                     return (
                       <button
                         type="button"
-                        className={`wiki-link ${target ? '' : 'unresolved'}`}
+                        className={`wiki-link ${target ? '' : link?.restricted ? 'restricted' : 'unresolved'}`}
                         onClick={() => target && onOpenNote(target.slug)}
-                        title={target ? `Abrir ${target.title}` : 'La nota referenciada todavía no existe'}
+                        title={target ? `Abrir ${target.title}` : link?.restricted ? 'No tienes acceso a esta nota' : 'La nota referenciada todavía no existe'}
                       >
                         {children}
                       </button>

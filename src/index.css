@@ -94,6 +94,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .markdown-body a, .wiki-link { color: #b7e66b; text-decoration: underline; text-decoration-color: rgba(183,230,107,.3); text-underline-offset: 3px; }
 .markdown-body a:hover, .wiki-link:hover { text-decoration-color: #b7e66b; }
 .wiki-link.unresolved { cursor: not-allowed; color: #858d80; text-decoration-style: dashed; }
+.wiki-link.restricted { cursor: not-allowed; color: #d6b77f; text-decoration-style: double; }
 
 .inspector { display: flex; width: 274px; flex: 0 0 274px; flex-direction: column; overflow-y: auto; border-left: 1px solid #2a2e26; background: #171a15; }
 .property-list { display: grid; gap: .55rem; font-size: 10px; }
@@ -104,6 +105,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .connection { display: flex; width: 100%; align-items: center; gap: .5rem; border-radius: 5px; padding: .4rem .45rem; color: #adb4a8; font-size: 10px; text-align: left; }
 .connection:hover { background: rgba(255,255,255,.035); color: #e4e8df; }
 .connection.unresolved { color: #777f72; }.connection.unresolved .connection-dot { border: 1px dashed #777f72; background: transparent; }
+.connection.restricted { color: #b99b68; }.connection.restricted .connection-dot { border: 1px double #d6a85f; background: transparent; }
 .connection-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; }
 .connection em { margin-left: auto; color: #777f72; font-size: 8px; font-style: normal; text-transform: uppercase; }
 
@@ -138,6 +140,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .graph-legend span { display: inline-flex; align-items: center; gap: .38rem; white-space: nowrap; }.graph-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #a7c976; box-shadow: 0 0 7px rgba(183,230,107,.18); }
 .graph-legend i.area { width: 10px; height: 10px; border: 1.5px solid #b7e66b; border-radius: 3px; background: rgba(183,230,107,.12); }.graph-legend i.note { background: #b7e66b; }.graph-legend i.index { border: 1px solid #b7e66b; border-radius: 1px; background: rgba(183,230,107,.18); transform: rotate(45deg); }.graph-legend i.pending { border: 1px dashed #858d80; background: transparent; box-shadow: none; }
 .graph-legend .legend-divider { width: 1px; height: 13px; background: #343a30; }.graph-legend b { display: inline-block; width: 15px; height: 1px; background: #7e8e70; }.graph-legend b.area-line { height: 2px; background: rgba(183,230,107,.32); }
+.graph-connection-mode { display: inline-flex; align-items: center; gap: .35rem; border-left: 1px solid #343a30; padding-left: .8rem; color: #a0a99a; white-space: nowrap; }.graph-connection-mode:hover { color: #dfe5d9; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(5,6,4,.76); padding: 1.5rem; backdrop-filter: blur(7px); }
 .modal-card { width: 100%; overflow: hidden; border: 1px solid #34392f; border-radius: 13px; background: #171a15; color: #e7eae3; box-shadow: 0 30px 100px rgba(0,0,0,.6); }

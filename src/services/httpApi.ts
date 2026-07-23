@@ -25,7 +25,13 @@ type ContextResponse = {
 
 type RawNote = {
   id?: string; _id?: string; area: string; slug: string; title: string; kind?: Note['kind']; body: string
+  aliases?: string[]
   sensitivity: Note['sensitivity']; visible_to?: string[]; version: number; updated_at?: string; updated_by?: string
+  outlinks?: Array<{
+    display: string; target_id?: string | null; target_slug?: string | null; target_title?: string
+    target_area?: string; access?: 'accessible' | 'restricted' | 'missing'
+  }>
+  unresolved?: Array<{ name: string }>
 }
 
 type RawMember = {
@@ -54,8 +60,18 @@ function mapContext(context: ContextResponse): { session: Session; areas: Area[]
 
 function mapNote(raw: RawNote): Note {
   return {
-    id: raw.id ?? raw._id ?? raw.slug, area: raw.area, slug: raw.slug, title: raw.title, kind: raw.kind ?? 'note', body: raw.body,
+    id: raw.id ?? raw._id ?? raw.slug, area: raw.area, slug: raw.slug, title: raw.title, kind: raw.kind ?? 'note',
+    aliases: raw.aliases ?? [], body: raw.body,
     sensitivity: raw.sensitivity, visibleTo: raw.visible_to ?? [], version: raw.version,
+    outlinks: (raw.outlinks ?? []).map((outlink) => ({
+      display: outlink.display,
+      targetId: outlink.target_id ?? undefined,
+      targetSlug: outlink.target_slug ?? undefined,
+      targetTitle: outlink.target_title,
+      targetArea: outlink.target_area,
+      access: outlink.access ?? (outlink.target_id ? 'accessible' : 'missing'),
+    })),
+    unresolved: raw.unresolved ?? [],
     updatedAt: raw.updated_at ?? new Date().toISOString(), updatedBy: raw.updated_by ?? 'Usuario', versions: [],
   }
 }

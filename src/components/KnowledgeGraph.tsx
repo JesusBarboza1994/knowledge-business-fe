@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
-import { Check, ChevronDown, Focus, Layers3, LocateFixed, Search, Waypoints, ZoomIn, ZoomOut } from 'lucide-react'
+import { Check, ChevronDown, Eye, EyeOff, Focus, Layers3, LocateFixed, Search, Waypoints, ZoomIn, ZoomOut } from 'lucide-react'
 import type { Area, Note } from '../types'
-import { extractWikiLinks, uniqueLinks } from '../lib/wiki'
+import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
+import { includeSelectionConnection, selectionGraphNotes } from '../lib/graph'
 
 interface KnowledgeGraphProps {
   notes: Note[]
@@ -20,21 +21,23 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
     selectedNote ? [selectedNote.area] : areas[0] ? [areas[0].key] : [],
   )
   const [query, setQuery] = useState('')
+  const [connectionMode, setConnectionMode] = useState<'focus' | 'all'>('focus')
 
-  const activeNotes = useMemo(
-    () => notes.filter((note) => !note.archived && (scope !== 'selection' || selectedAreaKeys.includes(note.area))),
-    [notes, scope, selectedAreaKeys],
-  )
+  const activeNotes = useMemo(() => {
+    const available = notes.filter((note) => !note.archived)
+    if (scope !== 'selection') return available
+    return selectionGraphNotes(available, selectedAreaKeys)
+  }, [notes, scope, selectedAreaKeys])
 
   const elements = useMemo<ElementDefinition[]>(() => {
     let visible = activeNotes
     if (scope === 'local' && selectedNote) {
       const related = new Set<string>([selectedNote.slug])
-      uniqueLinks(extractWikiLinks(selectedNote.body, notes)).forEach((link) => {
+      uniqueLinks(extractNoteLinks(selectedNote, notes)).forEach((link) => {
         related.add(link.target?.slug ?? `pending:${link.title}`)
       })
       notes.forEach((note) => {
-        if (extractWikiLinks(note.body, notes).some((link) => link.target?.id === selectedNote.id)) {
+        if (extractNoteLinks(note, notes).some((link) => link.target?.id === selectedNote.id)) {
           related.add(note.slug)
         }
       })
@@ -42,12 +45,16 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
     }
 
     const visibleSlugs = new Set(visible.map((note) => note.slug))
-    const linksByNote = new Map(visible.map((note) => [note.slug, uniqueLinks(extractWikiLinks(note.body, notes))]))
+    const linksByNote = new Map(visible.map((note) => [note.slug, uniqueLinks(extractNoteLinks(note, notes))]))
     const degrees = new Map(visible.map((note) => [note.slug, 0]))
+    const includeConnection = (source: Note, target?: Note) => {
+      if (scope !== 'selection') return true
+      return includeSelectionConnection(selectedAreaKeys, source, target)
+    }
 
     visible.forEach((note) => {
       linksByNote.get(note.slug)?.forEach((link) => {
-        if (!link.target || !visibleSlugs.has(link.target.slug)) return
+        if (!link.target || !visibleSlugs.has(link.target.slug) || !includeConnection(note, link.target)) return
         degrees.set(note.slug, (degrees.get(note.slug) ?? 0) + 1)
         degrees.set(link.target.slug, (degrees.get(link.target.slug) ?? 0) + 1)
       })
@@ -65,6 +72,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           color: area.color,
           size: 34,
           rank: scope === 'local' ? 82 : 100,
+          scopeRole: scope === 'selection' && !selectedAreaKeys.includes(area.key) ? 'boundary' : 'core',
         },
       }))
 
@@ -86,6 +94,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           size,
           rank,
           selected: isSelected ? 'yes' : 'no',
+          scopeRole: scope === 'selection' && !selectedAreaKeys.includes(note.area) ? 'boundary' : 'core',
         },
       })
       result.push({
@@ -101,21 +110,38 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
 
     visible.forEach((note) => {
       linksByNote.get(note.slug)?.forEach((link, index) => {
+        if (!includeConnection(note, link.target)) return
         const pendingId = `pending:${link.title}`
-        if (!link.target && !result.some((item) => item.data.id === pendingId)) {
+        const restrictedId = `restricted:${note.slug}:${index}`
+        if (link.restricted) {
+          result.push({
+            data: {
+              id: restrictedId,
+              label: `🔒 ${link.title}`,
+              type: 'restricted',
+              color: '#d6a85f',
+              area: note.area,
+              size: 11,
+              rank: 18,
+              scopeRole: scope === 'selection' && !selectedAreaKeys.includes(note.area) ? 'boundary' : 'core',
+            },
+          })
+        } else if (!link.target && !result.some((item) => item.data.id === pendingId)) {
           result.push({
             data: {
               id: pendingId,
               label: link.title,
               type: 'pending',
               color: '#747b6f',
+              area: note.area,
               size: 11,
               rank: 18,
+              scopeRole: scope === 'selection' && !selectedAreaKeys.includes(note.area) ? 'boundary' : 'core',
             },
           })
         }
 
-        const target = link.target?.slug ?? pendingId
+        const target = link.target?.slug ?? (link.restricted ? restrictedId : pendingId)
         if (!result.some((item) => item.data.id === target)) return
         const targetArea = link.target ? areas.find((area) => area.key === link.target?.area) : undefined
         const crossArea = Boolean(link.target && link.target.area !== note.area)
@@ -124,7 +150,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             id: `link:${note.slug}:${target}:${index}`,
             source: note.slug,
             target,
-            type: !link.target ? 'unresolved' : crossArea ? 'cross-area' : 'link',
+            type: link.restricted ? 'restricted' : !link.target ? 'unresolved' : crossArea ? 'cross-area' : 'link',
             color: targetArea?.color ?? '#8ea078',
           },
         })
@@ -160,22 +186,38 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       placeRing(featured, 128)
 
       const regular = nodeElements.filter(
-        (element) => !positioned.has(String(element.data.id)) && element.data.type !== 'pending',
+        (element) =>
+          !positioned.has(String(element.data.id))
+          && element.data.type !== 'pending'
+          && element.data.type !== 'restricted',
       )
       placeRing(regular, Math.max(170, regular.length * 24))
 
       const pending = nodeElements.filter(
-        (element) => !positioned.has(String(element.data.id)) && element.data.type === 'pending',
+        (element) =>
+          !positioned.has(String(element.data.id))
+          && (element.data.type === 'pending' || element.data.type === 'restricted'),
       )
       placeRing(pending, Math.max(235, pending.length * 27), -Math.PI / 2 + 0.3)
     } else {
       const areaNodes = nodeElements
         .filter((element) => element.data.type === 'area')
-        .sort((a, b) => String(a.data.label).localeCompare(String(b.data.label)))
+        .sort((a, b) => {
+          const roleOrder = Number(a.data.scopeRole === 'boundary') - Number(b.data.scopeRole === 'boundary')
+          return roleOrder || String(a.data.label).localeCompare(String(b.data.label))
+        })
       const columns = Math.max(1, Math.ceil(Math.sqrt(areaNodes.length)))
       const rows = Math.max(1, Math.ceil(areaNodes.length / columns))
-      const cellWidth = 390
-      const cellHeight = 340
+      const largestArea = Math.max(
+        1,
+        ...areaNodes.map((areaNode) => {
+          const areaKey = String(areaNode.data.id).slice(5)
+          return nodeElements.filter((element) => element.data.area === areaKey).length
+        }),
+      )
+      const clusterRadius = 85 + Math.sqrt(largestArea) * 46
+      const cellWidth = Math.max(420, clusterRadius * 2 + 170)
+      const cellHeight = Math.max(360, clusterRadius * 2 + 130)
       const goldenAngle = Math.PI * (3 - Math.sqrt(5))
 
       areaNodes.forEach((areaNode, areaIndex) => {
@@ -197,18 +239,22 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
 
         members.forEach((element, index) => {
           const angle = index * goldenAngle - Math.PI / 2
-          const radius = 62 + Math.sqrt(index) * 34
+          const radius = 68 + Math.sqrt(index) * 46
           position(element, centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius)
         })
       })
 
-      const pending = nodeElements.filter((element) => element.data.type === 'pending')
+      const pending = nodeElements.filter(
+        (element) =>
+          !positioned.has(String(element.data.id))
+          && (element.data.type === 'pending' || element.data.type === 'restricted'),
+      )
       const mapRadius = Math.max(columns * cellWidth, rows * cellHeight) / 2 + 150
       placeRing(pending, Math.max(mapRadius, pending.length * 18), -Math.PI / 2 + 0.2)
     }
 
     return result
-  }, [activeNotes, areas, notes, scope, selectedNote])
+  }, [activeNotes, areas, notes, scope, selectedAreaKeys, selectedNote])
 
   const stats = useMemo(() => {
     const nodes = elements.filter((element) => !element.data.source)
@@ -237,7 +283,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'font-family': 'Inter, sans-serif',
             'font-size': '9px',
             'font-weight': 500,
-            'min-zoomed-font-size': 8,
+            'min-zoomed-font-size': 11,
             'text-wrap': 'wrap',
             'text-max-width': '96px',
             'text-valign': 'bottom',
@@ -268,6 +314,15 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'underlay-color': 'data(color)',
             'underlay-opacity': 0.08,
             'underlay-padding': 11,
+            'min-zoomed-font-size': 0,
+          },
+        },
+        {
+          selector: 'node[scopeRole="boundary"]',
+          style: {
+            'background-opacity': 0.6,
+            'border-color': 'data(color)',
+            'border-width': 1,
           },
         },
         {
@@ -290,6 +345,17 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           },
         },
         {
+          selector: 'node[type="restricted"]',
+          style: {
+            'background-opacity': 0.08,
+            'border-width': 2,
+            'border-style': 'double',
+            'border-color': '#d6a85f',
+            color: '#d6b77f',
+            'text-background-opacity': 0.82,
+          },
+        },
+        {
           selector: 'node[selected="yes"]',
           style: {
             'border-width': 3,
@@ -298,11 +364,18 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'underlay-opacity': 0.16,
             'underlay-padding': 8,
             'font-weight': 600,
+            'min-zoomed-font-size': 0,
           },
         },
         {
           selector: 'node.hovered',
-          style: { 'border-width': 3, 'border-color': '#f1f6e9', 'underlay-opacity': 0.13, 'underlay-padding': 7 },
+          style: {
+            'border-width': 3,
+            'border-color': '#f1f6e9',
+            'underlay-opacity': 0.13,
+            'underlay-padding': 7,
+            'min-zoomed-font-size': 0,
+          },
         },
         {
           selector: 'node.sidebar-hovered',
@@ -315,6 +388,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'font-size': '11px',
             'font-weight': 700,
             'text-background-opacity': 1,
+            'min-zoomed-font-size': 0,
             'z-index': 999,
           },
         },
@@ -326,7 +400,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'target-arrow-color': '#718066',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            opacity: 0.5,
+            opacity: connectionMode === 'all' ? 0.46 : 0.06,
             'arrow-scale': 0.55,
             'overlay-opacity': 0,
             'transition-property': 'opacity, width, line-color',
@@ -339,13 +413,18 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'line-color': 'data(color)',
             'target-arrow-shape': 'none',
             'curve-style': 'straight',
-            opacity: 0.14,
+            opacity: connectionMode === 'all' ? 0.14 : 0.08,
             width: 2.5,
           },
         },
         {
           selector: 'edge[type="cross-area"]',
-          style: { 'line-color': 'data(color)', 'target-arrow-color': 'data(color)', opacity: 0.82, width: 2 },
+          style: {
+            'line-color': 'data(color)',
+            'target-arrow-color': 'data(color)',
+            opacity: connectionMode === 'all' ? 0.78 : 0.1,
+            width: connectionMode === 'all' ? 2 : 1.4,
+          },
         },
         {
           selector: 'edge[type="unresolved"]',
@@ -353,7 +432,16 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'line-style': 'dashed',
             'line-color': '#666e62',
             'target-arrow-color': '#666e62',
-            opacity: 0.42,
+            opacity: connectionMode === 'all' ? 0.42 : 0.12,
+          },
+        },
+        {
+          selector: 'edge[type="restricted"]',
+          style: {
+            'line-style': 'dashed',
+            'line-color': '#a88049',
+            'target-arrow-color': '#a88049',
+            opacity: connectionMode === 'all' ? 0.58 : 0.16,
           },
         },
         { selector: '.faded', style: { opacity: 0.1 } },
@@ -361,7 +449,13 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         { selector: 'edge.sidebar-focused', style: { opacity: 1, width: 2.6, 'z-index': 998 } },
         {
           selector: '.found',
-          style: { 'border-color': '#ffffff', 'border-width': 4, 'underlay-color': '#ffffff', 'underlay-opacity': 0.1 },
+          style: {
+            'border-color': '#ffffff',
+            'border-width': 4,
+            'underlay-color': '#ffffff',
+            'underlay-opacity': 0.1,
+            'min-zoomed-font-size': 0,
+          },
         },
       ],
       layout: { name: 'preset', animate: false, fit: true, padding: 54 },
@@ -377,7 +471,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         cy.animate({ fit: { eles: node.closedNeighborhood(), padding: 110 }, duration: 280 })
         return
       }
-      if (!id.startsWith('pending:')) onOpenNote(id)
+      if (!id.startsWith('pending:') && !id.startsWith('restricted:')) onOpenNote(id)
     })
     cy.on('tap', (event) => {
       if (event.target === cy) cy.animate({ fit: { eles: cy.elements(), padding: 72 }, duration: 240 })
@@ -397,7 +491,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
     })
     cyRef.current = cy
     return () => cy.destroy()
-  }, [elements, onOpenNote])
+  }, [connectionMode, elements, onOpenNote])
 
   useEffect(() => {
     const cy = cyRef.current
@@ -513,9 +607,14 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         <span><i className="note" /> Nota</span>
         <span><i className="index" /> Índice</span>
         <span><i className="pending" /> Sin resolver</span>
+        <span><i className="pending border-amber-400" /> Restringida</span>
         <span className="legend-divider" />
         <span><b className="link-line" /> Enlace</span>
         <span><b className="area-line" /> Pertenece al área</span>
+        <button className="graph-connection-mode" onClick={() => setConnectionMode((mode) => mode === 'focus' ? 'all' : 'focus')}>
+          {connectionMode === 'focus' ? <EyeOff size={12} /> : <Eye size={12} />}
+          {connectionMode === 'focus' ? 'Enlaces al enfocar' : 'Todos los enlaces'}
+        </button>
       </div>
     </div>
   )

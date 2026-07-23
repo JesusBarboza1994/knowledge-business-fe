@@ -25,14 +25,26 @@ export interface Note {
   slug: string
   title: string
   kind: NoteKind
+  aliases?: string[]
   body: string
   sensitivity: Sensitivity
   visibleTo: string[]
+  outlinks?: NoteOutlink[]
+  unresolved?: Array<{ name: string }>
   version: number
   updatedAt: string
   updatedBy: string
   archived?: boolean
   versions: NoteVersion[]
+}
+
+export interface NoteOutlink {
+  display: string
+  targetId?: string
+  targetSlug?: string
+  targetTitle?: string
+  targetArea?: string
+  access: 'accessible' | 'restricted' | 'missing'
 }
 
 export interface Member {
@@ -58,6 +70,8 @@ export interface WikiLink {
   title: string
   anchor?: string
   target?: Note
+  targetRef?: string
+  restricted?: boolean
 }
 
 export interface DeleteNoteResult {

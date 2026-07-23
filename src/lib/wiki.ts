@@ -11,11 +11,56 @@ export function slugify(value: string) {
 
 export function extractWikiLinks(body: string, notes: Note[]): WikiLink[] {
   const matches = [...body.matchAll(/\[\[([^\]]+)\]\]/g)]
-  const bySlug = new Map(notes.filter((note) => !note.archived).map((note) => [note.slug, note]))
+  const bySlug = new Map<string, Note>()
+  notes.filter((note) => !note.archived).forEach((note) => {
+    bySlug.set(note.slug, note)
+    note.aliases?.forEach((alias) => bySlug.set(slugify(alias), note))
+  })
   return matches.map((match) => {
     const [title, anchor] = match[1].split('#')
     return { raw: match[0], title, anchor, target: bySlug.get(slugify(title)) }
   })
+}
+
+export function extractNoteLinks(note: Note, notes: Note[]): WikiLink[] {
+  const links = extractWikiLinks(note.body, notes)
+  const byId = new Map(notes.filter((item) => !item.archived).map((item) => [item.id, item]))
+  const bySlug = new Map(notes.filter((item) => !item.archived).map((item) => [item.slug, item]))
+  const outlinks = note.outlinks ?? []
+  const outlinksByName = new Map(
+    outlinks.map((outlink) => [slugify(outlink.display.split('#')[0]), outlink]),
+  )
+
+  const resolved = links.map((link) => {
+    const outlink = outlinksByName.get(slugify(link.title))
+    if (!outlink) return link
+    if (outlink.access === 'restricted') return { ...link, target: undefined, restricted: true }
+    if (outlink.access !== 'accessible') return { ...link, target: undefined }
+
+    const target = (outlink.targetId ? byId.get(outlink.targetId) : undefined)
+      ?? (outlink.targetSlug ? bySlug.get(outlink.targetSlug) : undefined)
+      ?? link.target
+    return { ...link, target, targetRef: outlink.targetSlug }
+  })
+
+  const parsedNames = new Set(links.map((link) => slugify(link.title)))
+  const redacted = outlinks
+    .filter((outlink) => !parsedNames.has(slugify(outlink.display.split('#')[0])))
+    .map((outlink): WikiLink => {
+      const [title, anchor] = outlink.display.split('#')
+      const target = (outlink.targetId ? byId.get(outlink.targetId) : undefined)
+        ?? (outlink.targetSlug ? bySlug.get(outlink.targetSlug) : undefined)
+      return {
+        raw: `[[${outlink.display}]]`,
+        title,
+        anchor,
+        target: outlink.access === 'accessible' ? target : undefined,
+        targetRef: outlink.targetSlug,
+        restricted: outlink.access === 'restricted',
+      }
+    })
+
+  return [...resolved, ...redacted]
 }
 
 export function uniqueLinks(links: WikiLink[]) {
@@ -49,7 +94,17 @@ export function noteReferenceFromHref(href?: string) {
 export function resolveInternalNoteHref(href: string | undefined, notes: Note[]) {
   const reference = noteReferenceFromHref(href)
   if (!reference) return undefined
-  return notes.find((note) => !note.archived && note.slug === reference)
+  return notes.find(
+    (note) =>
+      !note.archived
+      && (note.slug === reference || note.aliases?.some((alias) => slugify(alias) === reference)),
+  )
+}
+
+export function resolveNoteHref(href: string | undefined, source: Note, notes: Note[]) {
+  const reference = noteReferenceFromHref(href)
+  if (!reference) return undefined
+  return extractNoteLinks(source, notes).find((link) => slugify(link.title) === reference)
 }
 
 export function unlinkNoteReferences(body: string, note: Pick<Note, 'slug' | 'title'>) {

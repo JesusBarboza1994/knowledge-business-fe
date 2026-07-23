@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, CirclePlus, File, FileClock, FileText, FolderKan
 import { AdminPanel } from './AdminPanel'
 import { KnowledgeGraph } from './KnowledgeGraph'
 import { MarkdownEditor } from './MarkdownEditor'
-import { extractWikiLinks, uniqueLinks } from '../lib/wiki'
+import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
 import { api } from '../services/api'
 import type { Area, Member, Note, Session } from '../types'
 
@@ -98,22 +98,47 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
 }
 
 function Inspector({ note, notes, areas, onOpenNote, onGraph, onDelete, canDelete }: { note?: Note; notes: Note[]; areas: Area[]; onOpenNote: (slug: string) => void; onGraph: () => void; onDelete: () => void; canDelete: boolean }) {
-  const links = useMemo(() => note ? uniqueLinks(extractWikiLinks(note.body, notes)) : [], [note, notes])
-  const backlinks = useMemo(() => note ? notes.filter((candidate) => !candidate.archived && extractWikiLinks(candidate.body, notes).some((link) => link.target?.id === note.id)) : [], [note, notes])
+  const links = useMemo(() => note ? uniqueLinks(extractNoteLinks(note, notes)) : [], [note, notes])
+  const backlinks = useMemo(() => note ? notes.filter((candidate) => !candidate.archived && extractNoteLinks(candidate, notes).some((link) => link.target?.id === note.id)) : [], [note, notes])
   if (!note) return <aside className="inspector" />
   const area = areas.find((item) => item.key === note.area)
-  return <aside className="inspector"><div className="border-b border-line px-4 py-4"><p className="sidebar-label">Contexto</p><dl className="property-list"><div><dt>Área</dt><dd><i style={{ backgroundColor: area?.color }} />{area?.name}</dd></div><div><dt>Tipo</dt><dd>{note.kind === 'note' ? 'Nota' : note.kind === 'index' ? 'Índice' : 'Registro'}</dd></div><div><dt>Versión</dt><dd>{note.version}</dd></div><div><dt>Actualizó</dt><dd className="truncate">{note.updatedBy}</dd></div></dl></div><InspectorSection title="Enlaces salientes" count={links.length}>{links.map((link) => <button key={link.title} className={`connection ${link.target ? '' : 'unresolved'}`} onClick={() => link.target && onOpenNote(link.target.slug)}><span className="connection-dot" style={{ backgroundColor: link.target ? areas.find((item) => item.key === link.target?.area)?.color : undefined }} /><span className="truncate">{link.title}</span>{!link.target && <em>Pendiente</em>}</button>)}</InspectorSection><InspectorSection title="Backlinks" count={backlinks.length}>{backlinks.map((item) => <button key={item.id} className="connection" onClick={() => onOpenNote(item.slug)}><span className="connection-dot" style={{ backgroundColor: areas.find((areaItem) => areaItem.key === item.area)?.color }} /><span className="truncate">{item.title}</span></button>)}</InspectorSection><div className="mt-auto border-t border-line p-3"><button className="bottom-nav" onClick={onGraph}><Network size={15} /> Ver en el grafo</button>{canDelete && note.kind === 'note' && <button className="bottom-nav danger" onClick={onDelete}><Trash2 size={15} /> Eliminar nota</button>}</div></aside>
+  return <aside className="inspector"><div className="border-b border-line px-4 py-4"><p className="sidebar-label">Contexto</p><dl className="property-list"><div><dt>Área</dt><dd><i style={{ backgroundColor: area?.color }} />{area?.name}</dd></div><div><dt>Tipo</dt><dd>{note.kind === 'note' ? 'Nota' : note.kind === 'index' ? 'Índice' : 'Registro'}</dd></div><div><dt>Versión</dt><dd>{note.version}</dd></div><div><dt>Actualizó</dt><dd className="truncate">{note.updatedBy}</dd></div></dl></div><InspectorSection title="Enlaces salientes" count={links.length}>{links.map((link) => <button key={link.title} className={`connection ${link.target ? '' : link.restricted ? 'restricted' : 'unresolved'}`} onClick={() => link.target && onOpenNote(link.target.slug)}><span className="connection-dot" style={{ backgroundColor: link.target ? areas.find((item) => item.key === link.target?.area)?.color : undefined }} /><span className="truncate">{link.title}</span>{!link.target && <em>{link.restricted ? 'Restringida' : 'Pendiente'}</em>}</button>)}</InspectorSection><InspectorSection title="Backlinks" count={backlinks.length}>{backlinks.map((item) => <button key={item.id} className="connection" onClick={() => onOpenNote(item.slug)}><span className="connection-dot" style={{ backgroundColor: areas.find((areaItem) => areaItem.key === item.area)?.color }} /><span className="truncate">{item.title}</span></button>)}</InspectorSection><div className="mt-auto border-t border-line p-3"><button className="bottom-nav" onClick={onGraph}><Network size={15} /> Ver en el grafo</button>{canDelete && note.kind === 'note' && <button className="bottom-nav danger" onClick={onDelete}><Trash2 size={15} /> Eliminar nota</button>}</div></aside>
 }
 
 function InspectorSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) { return <section className="border-b border-line px-3 py-4"><div className="mb-2 flex items-center justify-between px-1"><p className="sidebar-label !mb-0">{title}</p><span className="count-badge">{count}</span></div><div className="space-y-0.5">{children}{!count && <p className="px-2 py-3 text-xs text-muted">Sin conexiones todavía.</p>}</div></section> }
 
-function NewNoteDialog({ areaName, onClose, onCreate }: { areaName: string; onClose: () => void; onCreate: (title: string) => void }) { const [title, setTitle] = useState(''); return <div className="modal-backdrop"><form className="modal-card max-w-md p-6" onSubmit={(event) => { event.preventDefault(); if (title.trim()) void onCreate(title.trim()) }}><p className="eyebrow">Nueva nota · {areaName}</p><h2 className="mt-1 text-xl font-medium">¿Qué quieres documentar?</h2><label className="mt-6 block"><span className="field-label">Título</span><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} className="field" placeholder="Ej. Estrategia de búsqueda" /></label><p className="mt-2 text-xs text-muted">El slug se generará automáticamente a partir del título.</p><div className="mt-6 flex justify-end gap-3"><button type="button" className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" disabled={!title.trim()}>Crear nota</button></div></form></div> }
+function NewNoteDialog({ areaName, onClose, onCreate }: { areaName: string; onClose: () => void; onCreate: (title: string) => void }) {
+  const [title, setTitle] = useState('')
+
+  return <div className="modal-backdrop">
+    <form className="modal-card max-w-md p-6" onSubmit={(event) => { event.preventDefault(); if (title.trim()) void onCreate(title.trim()) }}>
+      <p className="eyebrow">Nueva nota · {areaName}</p>
+      <h2 className="mt-1 text-xl font-medium">¿Qué quieres documentar?</h2>
+      <label className="mt-6 block">
+        <span className="field-label">Título</span>
+        <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} className="field" placeholder="Ej. Estrategia de búsqueda" />
+      </label>
+      <p className="mt-2 text-xs text-muted">El slug se generará automáticamente a partir del título.</p>
+      <div role="note" className="mt-4 flex gap-3 rounded-lg border border-moss/20 bg-moss/5 px-3 py-3">
+        <BookOpen size={16} className="mt-0.5 flex-none text-moss" />
+        <div>
+          <p className="text-xs font-medium text-stone-200">Recuerda revisar el índice del área</p>
+          <p className="mt-1 text-xs leading-5 text-muted">Si esta nota debe ser fácil de descubrir, agrégala manualmente al índice correspondiente.</p>
+        </div>
+      </div>
+      <div className="mt-6 flex justify-end gap-3">
+        <button type="button" className="secondary-button" onClick={onClose}>Cancelar</button>
+        <button className="primary-button" disabled={!title.trim()}>Crear nota</button>
+      </div>
+    </form>
+  </div>
+}
 
 function DeleteNoteDialog({ note, notes, onClose, onConfirm }: { note: Note; notes: Note[]; onClose: () => void; onConfirm: () => Promise<void> }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const outgoing = uniqueLinks(extractWikiLinks(note.body, notes)).length
-  const incoming = notes.filter((candidate) => !candidate.archived && candidate.id !== note.id && extractWikiLinks(candidate.body, notes).some((link) => link.target?.id === note.id)).length
+  const outgoing = uniqueLinks(extractNoteLinks(note, notes)).length
+  const incoming = notes.filter((candidate) => !candidate.archived && candidate.id !== note.id && extractNoteLinks(candidate, notes).some((link) => link.target?.id === note.id)).length
   const total = outgoing + incoming
   async function confirm() {
     setLoading(true); setError('')
