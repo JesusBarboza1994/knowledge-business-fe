@@ -18,7 +18,7 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
   }
 
   return (
-    <main className="login-grid min-h-screen overflow-hidden bg-ink text-stone-100">
+    <main className="login-grid login-screen min-h-screen overflow-hidden bg-ink text-stone-100">
       <section className="relative hidden border-r border-line lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="login-orb" />
         <div className="relative z-10 flex items-center gap-3">
@@ -36,17 +36,17 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
         </div>
       </section>
 
-      <section className="flex items-center justify-center px-6 py-12 sm:px-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-10 flex items-center gap-3 lg:hidden"><div className="grid h-10 w-10 place-items-center rounded-xl bg-moss/10 text-moss"><Network size={20} /></div><span className="font-semibold">Knowledge Hub</span></div>
+      <section className="login-panel flex items-center justify-center px-6 py-12 sm:px-12">
+        <div className="login-form w-full max-w-sm">
+          <div className="login-mobile-brand mb-10 flex items-center gap-3 lg:hidden"><div className="grid h-11 w-11 place-items-center rounded-xl border border-moss/15 bg-moss/10 text-moss"><Network size={21} /></div><div><span className="block font-semibold">Knowledge Hub</span><span className="text-xs text-muted">MenteMente</span></div></div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-moss">Bienvenido</p>
           <h2 className="text-3xl font-medium tracking-tight">Entra a tu organización</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Tu organización y tus áreas se cargarán automáticamente.</p>
           <form className="mt-9 space-y-5" onSubmit={submit}>
-            <label className="block"><span className="field-label">Correo de trabajo</span><input className="field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
-            <label className="block"><span className="field-label">Contraseña</span><span className="relative block"><input className="field pr-11" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" /><button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-stone-200" onClick={() => setShowPassword((value) => !value)} aria-label="Mostrar contraseña">{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
+            <label className="block"><span className="field-label">Correo de trabajo</span><input className="field" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="nombre@empresa.com" /></label>
+            <label className="block"><span className="field-label">Contraseña</span><span className="relative block"><input className="field pr-12" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="Tu contraseña" /><button type="button" className="password-toggle absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center text-muted hover:text-stone-200" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>{showPassword ? <EyeOff size={19} /> : <Eye size={19} />}</button></span></label>
             {error && <p className="rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">{error}</p>}
-            <button className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-moss font-semibold text-[#17200c] transition hover:bg-[#c8f47f] disabled:opacity-60" disabled={loading}>{loading ? <span className="loader dark" /> : <>Continuar <ArrowRight size={17} className="transition group-hover:translate-x-0.5" /></>}</button>
+            <button className="login-submit group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-moss font-semibold text-[#17200c] transition hover:bg-[#c8f47f] disabled:opacity-60" disabled={loading}>{loading ? <span className="loader dark" /> : <>Continuar <ArrowRight size={17} className="transition group-hover:translate-x-0.5" /></>}</button>
           </form>
           <p className="mt-6 text-center text-xs text-muted">Acceso seguro a tu espacio de conocimiento</p>
         </div>

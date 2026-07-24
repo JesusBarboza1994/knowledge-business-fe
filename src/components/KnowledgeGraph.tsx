@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
-import { Check, ChevronDown, Eye, EyeOff, Focus, Layers3, LocateFixed, Search, Waypoints, ZoomIn, ZoomOut } from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, Eye, EyeOff, Focus, Layers3, LocateFixed, Search, SlidersHorizontal, Waypoints, X, ZoomIn, ZoomOut } from 'lucide-react'
 import type { Area, Note } from '../types'
 import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
 import { includeSelectionConnection, selectionGraphNotes } from '../lib/graph'
@@ -16,12 +16,15 @@ interface KnowledgeGraphProps {
 export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, onOpenNote }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const cyRef = useRef<Core | null>(null)
+  const focusedSlugRef = useRef<string | undefined>(undefined)
   const [scope, setScope] = useState<'local' | 'selection' | 'all'>('selection')
   const [selectedAreaKeys, setSelectedAreaKeys] = useState<string[]>(
     selectedNote ? [selectedNote.area] : areas[0] ? [areas[0].key] : [],
   )
   const [query, setQuery] = useState('')
   const [connectionMode, setConnectionMode] = useState<'focus' | 'all'>('focus')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [focusedSlug, setFocusedSlug] = useState<string>()
 
   const activeNotes = useMemo(() => {
     const available = notes.filter((note) => !note.archived)
@@ -269,6 +272,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
 
   useEffect(() => {
     if (!containerRef.current) return
+    const mobileViewport = window.matchMedia('(max-width: 1023px)').matches
     const cy = cytoscape({
       container: containerRef.current,
       elements,
@@ -281,9 +285,9 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             label: 'data(label)',
             color: '#dfe4da',
             'font-family': 'Inter, sans-serif',
-            'font-size': '9px',
+            'font-size': mobileViewport ? '12px' : '9px',
             'font-weight': 500,
-            'min-zoomed-font-size': 11,
+            'min-zoomed-font-size': mobileViewport ? 0 : 11,
             'text-wrap': 'wrap',
             'text-max-width': '96px',
             'text-valign': 'bottom',
@@ -378,6 +382,17 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           },
         },
         {
+          selector: 'node.tap-focused',
+          style: {
+            'border-width': 4,
+            'border-color': '#ffffff',
+            'underlay-color': 'data(color)',
+            'underlay-opacity': 0.24,
+            'underlay-padding': 10,
+            'min-zoomed-font-size': 0,
+          },
+        },
+        {
           selector: 'node.sidebar-hovered',
           style: {
             'border-width': 4,
@@ -463,7 +478,29 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       maxZoom: 3,
       boxSelectionEnabled: false,
     })
+    if (mobileViewport) {
+      const mobileFocus = scope === 'local' && selectedNote
+        ? cy.getElementById(selectedNote.slug).closedNeighborhood()
+        : scope === 'selection' && selectedAreaKeys[0]
+          ? cy.getElementById(`area:${selectedAreaKeys[0]}`).closedNeighborhood()
+          : cy.elements()
+      if (mobileFocus.length) {
+        cy.fit(mobileFocus, 34)
+        cy.zoom({
+          level: Math.min(cy.zoom() * 2.8, 1.35),
+          renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 },
+        })
+      }
+    }
 
+    const focusNode = (node: ReturnType<Core['getElementById']>) => {
+      cy.elements().removeClass('faded focused hovered tap-focused')
+      const neighborhood = node.closedNeighborhood()
+      cy.elements().addClass('faded')
+      neighborhood.removeClass('faded')
+      neighborhood.edges().addClass('focused')
+      node.addClass('tap-focused')
+    }
     cy.on('tap', 'node', (event) => {
       const node = event.target
       const id = node.id()
@@ -471,10 +508,25 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         cy.animate({ fit: { eles: node.closedNeighborhood(), padding: 110 }, duration: 280 })
         return
       }
-      if (!id.startsWith('pending:') && !id.startsWith('restricted:')) onOpenNote(id)
+      focusNode(node)
+      if (id.startsWith('pending:') || id.startsWith('restricted:')) {
+        focusedSlugRef.current = undefined
+        setFocusedSlug(undefined)
+        return
+      }
+      if (focusedSlugRef.current === id) {
+        onOpenNote(id)
+        return
+      }
+      focusedSlugRef.current = id
+      setFocusedSlug(id)
     })
     cy.on('tap', (event) => {
-      if (event.target === cy) cy.animate({ fit: { eles: cy.elements(), padding: 72 }, duration: 240 })
+      if (event.target === cy) {
+        focusedSlugRef.current = undefined
+        setFocusedSlug(undefined)
+        cy.elements().removeClass('faded focused hovered tap-focused')
+      }
     })
     cy.on('mouseover', 'node', (event) => {
       const node = event.target
@@ -486,12 +538,15 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       if (containerRef.current) containerRef.current.style.cursor = 'pointer'
     })
     cy.on('mouseout', 'node', () => {
-      cy.elements().removeClass('faded focused hovered')
+      cy.elements().removeClass('hovered')
+      const focused = focusedSlugRef.current ? cy.getElementById(focusedSlugRef.current) : null
+      if (focused?.length) focusNode(focused)
+      else cy.elements().removeClass('faded focused tap-focused')
       if (containerRef.current) containerRef.current.style.cursor = 'default'
     })
     cyRef.current = cy
     return () => cy.destroy()
-  }, [connectionMode, elements, onOpenNote])
+  }, [connectionMode, elements, onOpenNote, scope, selectedAreaKeys, selectedNote])
 
   useEffect(() => {
     const cy = cyRef.current
@@ -537,6 +592,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       : selectedAreaKeys.length === 1
         ? `Área ${areas.find((area) => area.key === selectedAreaKeys[0])?.name ?? ''}`
         : `${selectedAreaKeys.length} áreas seleccionadas`
+  const focusedNote = notes.find((note) => note.slug === focusedSlug && !note.archived)
+  const focusedArea = focusedNote ? areas.find((area) => area.key === focusedNote.area) : undefined
 
   return (
     <div className="graph-shell relative flex min-h-0 flex-1 flex-col">
@@ -585,6 +642,10 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             <Layers3 size={13} /> Todas
           </button>
         </div>
+        <button className="graph-mobile-filter-button" onClick={() => setFiltersOpen(true)} aria-label="Abrir filtros del grafo">
+          <SlidersHorizontal size={17} />
+          <span>{selectedAreaKeys.length}</span>
+        </button>
       </header>
 
       <div ref={containerRef} className="graph-canvas min-h-0 flex-1" aria-label="Grafo interactivo de conocimiento" />
@@ -616,6 +677,28 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           {connectionMode === 'focus' ? 'Enlaces al enfocar' : 'Todos los enlaces'}
         </button>
       </div>
+      {focusedNote && <div className="graph-node-card">
+        <span className="graph-node-card-color" style={{ backgroundColor: focusedArea?.color }} />
+        <div className="min-w-0 flex-1"><strong className="block truncate">{focusedNote.title}</strong><span className="block truncate">{focusedArea?.name} · Toca nuevamente el nodo para abrir</span></div>
+        <button onClick={() => onOpenNote(focusedNote.slug)}>Abrir <ArrowUpRight size={14} /></button>
+      </div>}
+      {filtersOpen && <div className="mobile-sheet-backdrop" onClick={() => setFiltersOpen(false)}>
+        <section className="mobile-sheet graph-filter-sheet" onClick={(event) => event.stopPropagation()}>
+          <div className="mobile-sheet-handle" />
+          <div className="mobile-sheet-head"><div><p className="eyebrow">Mapa</p><h2>Filtros del grafo</h2></div><button className="icon-button" aria-label="Cerrar filtros" onClick={() => setFiltersOpen(false)}><X size={18} /></button></div>
+          <div className="px-5 pb-6">
+            <p className="field-label">Alcance</p>
+            <div className="mobile-scope-grid">
+              <button className={scope === 'local' ? 'active' : ''} onClick={() => setScope('local')}><Focus size={16} /><span>Local</span></button>
+              <button className={scope === 'selection' ? 'active' : ''} onClick={() => setScope('selection')}><Waypoints size={16} /><span>Selección</span></button>
+              <button className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}><Layers3 size={16} /><span>Todas</span></button>
+            </div>
+            <fieldset className="mt-5"><legend className="field-label">Áreas incluidas</legend><div className="max-h-60 space-y-2 overflow-auto">{areas.map((area) => <label key={area.key} className="mobile-check-row"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: area.color }} /><span className="min-w-0 flex-1 truncate">{area.name}</span><input type="checkbox" checked={selectedAreaKeys.includes(area.key)} onChange={() => toggleArea(area.key)} /></label>)}</div></fieldset>
+            <button className="secondary-button mt-5 h-11 w-full" onClick={() => setConnectionMode((mode) => mode === 'focus' ? 'all' : 'focus')}>{connectionMode === 'focus' ? <EyeOff size={15} /> : <Eye size={15} />}{connectionMode === 'focus' ? 'Mostrar enlaces al enfocar' : 'Mostrar todos los enlaces'}</button>
+            <button className="primary-button mt-3 h-11 w-full" onClick={() => setFiltersOpen(false)}>Aplicar filtros</button>
+          </div>
+        </section>
+      </div>}
     </div>
   )
 }

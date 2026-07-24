@@ -4,7 +4,7 @@ import { markdown } from '@codemirror/lang-markdown'
 import { autocompletion, type CompletionContext } from '@codemirror/autocomplete'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Check, ChevronDown, Columns2, Eye, FileClock, Pencil, Save, TriangleAlert } from 'lucide-react'
+import { Check, ChevronDown, Columns2, Eye, FileClock, Pencil, Save, SlidersHorizontal, TriangleAlert, X } from 'lucide-react'
 import { markdownWithWikiLinks, noteReferenceFromHref, resolveNoteHref, wikiLinkCompletion } from '../lib/wiki'
 import { api } from '../services/api'
 import type { Area, Note, NoteVersion, Sensitivity } from '../types'
@@ -28,6 +28,7 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
   const [mode, setMode] = useState<'edit' | 'split' | 'preview'>(canEdit ? 'edit' : 'preview')
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyVersions, setHistoryVersions] = useState<NoteVersion[] | null>(null)
   const [conflict, setConflict] = useState<Note | null>(null)
   const baseVersion = useRef(note.version)
@@ -95,7 +96,7 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[#141611]">
-      <header className="flex min-h-[62px] items-center gap-3 border-b border-line px-5">
+      <header className="editor-header flex min-h-[62px] items-center gap-3 border-b border-line px-5">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-[.15em] text-muted">
             {note.kind !== 'note' && <span className="rounded bg-moss/10 px-1.5 py-0.5 text-moss">{note.kind === 'index' ? 'Índice del área' : 'Registro del área'}</span>}
@@ -112,6 +113,10 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
           <button className={`mode-button ${mode === 'preview' ? 'active' : ''}`} title="Vista previa" onClick={() => setMode('preview')}><Eye size={14} /></button>
         </div>
       </header>
+      <div className="mobile-editor-toolbar">
+        {canEdit && <button className={mode === 'edit' ? 'active' : ''} onClick={() => setMode('edit')}><Pencil size={15} /> Editar</button>}
+        <button className={mode !== 'edit' ? 'active' : ''} onClick={() => setMode('preview')}><Eye size={15} /> Vista previa</button>
+      </div>
 
       <div className={`editor-grid mode-${mode}`}>
         {mode !== 'preview' && (
@@ -149,7 +154,8 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
       </div>
 
       {canEdit && (
-        <footer className="flex min-h-11 items-center gap-3 border-t border-line px-5 text-xs text-muted">
+        <footer className="editor-settings-footer flex min-h-11 items-center gap-3 border-t border-line px-5 text-xs text-muted">
+          <button className="mobile-editor-settings" onClick={() => setSettingsOpen(true)}><SlidersHorizontal size={15} /> Visibilidad y acceso</button>
           <span className="relative"><select value={sensitivity} onChange={(event) => { setSensitivity(event.target.value as Sensitivity); changed() }} className="appearance-none border-0 bg-transparent py-1 pl-0 pr-5 text-xs text-muted ring-0 focus:text-stone-200 focus:ring-0"><option value="public_org">Público en la organización</option><option value="internal_area">Interno del área</option><option value="confidential">Confidencial</option></select><ChevronDown size={12} className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2" /></span>
           <span className="h-3 w-px bg-line" />
           <span>Visible en</span>
@@ -157,6 +163,17 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
         </footer>
       )}
 
+      {settingsOpen && <div className="mobile-sheet-backdrop" onClick={() => setSettingsOpen(false)}>
+        <section className="mobile-sheet" onClick={(event) => event.stopPropagation()}>
+          <div className="mobile-sheet-handle" />
+          <div className="mobile-sheet-head"><div><p className="eyebrow">Configuración</p><h2>Visibilidad de la nota</h2></div><button className="icon-button" aria-label="Cerrar visibilidad" onClick={() => setSettingsOpen(false)}><X size={18} /></button></div>
+          <div className="space-y-5 px-5 pb-6">
+            <label className="block"><span className="field-label">Sensibilidad</span><select value={sensitivity} onChange={(event) => { setSensitivity(event.target.value as Sensitivity); changed() }} className="field"><option value="public_org">Público en la organización</option><option value="internal_area">Interno del área</option><option value="confidential">Confidencial</option></select></label>
+            <fieldset><legend className="field-label">Visible en áreas</legend><div className="space-y-2">{areas.map((area) => <label key={area.key} className="mobile-check-row"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: area.color }} /><span className="min-w-0 flex-1 truncate">{area.name}</span><input type="checkbox" checked={visibleTo.includes(area.key)} onChange={(event) => { setVisibleTo((current) => event.target.checked ? [...current, area.key] : current.filter((key) => key !== area.key)); changed() }} /></label>)}</div></fieldset>
+            <button className="primary-button h-11 w-full" onClick={() => setSettingsOpen(false)}>Listo</button>
+          </div>
+        </section>
+      </div>}
       {historyOpen && <HistoryDialog note={{ ...note, versions: historyVersions ?? note.versions }} local={{ title, body }} onClose={() => setHistoryOpen(false)} />}
       {conflict && <ConflictDialog local={{ title, body }} remote={conflict} onKeepRemote={() => { setTitle(conflict.title); setBody(conflict.body); baseVersion.current = conflict.version; dirty.current = false; setConflict(null); setSaveState('saved'); onSaved(conflict) }} onKeepLocal={() => { baseVersion.current = conflict.version; dirty.current = true; void save(conflict.version) }} />}
     </div>
