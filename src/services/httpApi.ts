@@ -1,6 +1,7 @@
 import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Session } from '../types'
 
-const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000/v1').replace(/\/$/, '')
+const defaultApiUrl = import.meta.env.DEV ? 'http://localhost:3000/v1' : '/api/v1'
+const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '')
 
 class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly details?: unknown) { super(message) }

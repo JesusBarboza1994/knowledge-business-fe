@@ -11,10 +11,10 @@ pnpm dev
 
 La aplicación abre en `http://localhost:5173` y se conecta por defecto a `http://localhost:3000/v1`. Usa un usuario real creado en `knowledge-business`.
 
-Configura otra API creando `.env`:
+Para desarrollo local puedes configurar otra API creando `.env`:
 
 ```env
-VITE_API_URL=https://tu-backend.up.railway.app/v1
+VITE_API_URL=http://localhost:3000/v1
 ```
 
 ## Capacidades del MVP
@@ -32,7 +32,7 @@ VITE_API_URL=https://tu-backend.up.railway.app/v1
 
 ## Arquitectura de integración
 
-La UI consume `src/services/httpApi.ts`, usa cookies de sesión `httpOnly` y nunca se conecta directamente a MongoDB. `src/services/mockApi.ts` permanece disponible únicamente para desarrollo con `VITE_USE_MOCKS=true`.
+La UI consume `src/services/httpApi.ts`, usa cookies de sesión `httpOnly` y nunca se conecta directamente a MongoDB. En producción, el servidor del frontend expone `/api/*` como proxy hacia el backend para mantener la cookie en el mismo dominio y evitar el bloqueo de cookies de terceros en navegadores móviles. `src/services/mockApi.ts` permanece disponible únicamente para desarrollo con `VITE_USE_MOCKS=true`.
 
 Los modelos de `src/types.ts` siguen la estructura actual de `knowledge-business`: organización/tenant único, memberships por área, notas Markdown, sensibilidad y versión optimista.
 
@@ -48,5 +48,12 @@ Consulta [PRODUCTION.md](./PRODUCTION.md) para el trabajo pendiente antes de des
 
 ## Railway
 
-Configura el directorio raíz del servicio como `knowledge-frontend`, define `VITE_API_URL` antes del build y Railway utilizará `railway.json`. El servidor de producción incluido respeta `PORT` y aplica fallback para rutas SPA.
+Configura el directorio raíz del servicio como `knowledge-frontend`. En el servicio frontend de Railway define:
+
+```env
+VITE_API_URL=/api/v1
+API_PROXY_TARGET=https://tu-backend.up.railway.app
+```
+
+`API_PROXY_TARGET` no debe incluir `/v1`. En el servicio backend define `FRONTEND_URL` con la URL HTTPS exacta del frontend. Railway utilizará `railway.json`; el servidor incluido respeta `PORT`, aplica fallback para rutas SPA y reenvía `/api/*` al backend.
 # knowledge-business-fe

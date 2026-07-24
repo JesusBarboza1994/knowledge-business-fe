@@ -46,7 +46,9 @@ El frontend ya utiliza la API HTTP y la persistencia real del backend. Antes de 
 
 - [x] Crear servicio estático/frontend con `pnpm build` y servir `dist/`.
 - [x] Servir `dist/` con el servidor Node incluido y fallback SPA hacia `index.html`.
-- [ ] Definir `VITE_API_URL` durante el build.
+- [x] Usar `/api/v1` como URL de API en producción para mantener una sesión first-party.
+- [ ] Definir `VITE_API_URL=/api/v1` y `API_PROXY_TARGET=https://<backend>` en Railway.
+- [ ] Definir `FRONTEND_URL=https://<frontend>` en el backend.
 - [ ] Usar dominios HTTPS estables para frontend y backend.
 - [ ] Configurar health checks, logs y alertas de ambos servicios.
 - [x] Incluir configuración base de Railway y health checks para ambos servicios.
