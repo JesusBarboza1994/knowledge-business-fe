@@ -158,7 +158,10 @@ button { -webkit-tap-highlight-color: transparent; }
 .member-row { display: flex; width: 100%; align-items: center; gap: .75rem; padding: .8rem 1rem; transition: .12s; }
 .member-row:hover, .member-row.active { background: rgba(255,255,255,.035); }.member-row.active { box-shadow: inset 2px 0 #b7e66b; }
 .avatar { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 1px solid #343a2e; border-radius: 9px; background: #22271e; color: #c8e99a; font-size: 10px; font-weight: 600; }.avatar.large { width: 43px; height: 43px; border-radius: 12px; font-size: 12px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; }.status-dot.active { background: #9ac85c; box-shadow: 0 0 7px #9ac85c; }.status-dot.invited { border: 1px solid #8b9185; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; }.status-dot.active { background: #9ac85c; box-shadow: 0 0 7px #9ac85c; }.status-dot.invited { border: 1px solid #8b9185; }.status-dot.inactive { background: #6d7469; opacity: .55; }
+.admin-section-tabs { display: inline-flex; gap: 3px; border: 1px solid #2a2e26; border-radius: 8px; background: #10120e; padding: 3px; }
+.admin-section-tabs button { display: flex; min-height: 34px; align-items: center; gap: .45rem; border-radius: 6px; padding: 0 .8rem; color: #838b7d; font-size: 11px; transition: .12s; }
+.admin-section-tabs button:hover { color: #d9ded4; }.admin-section-tabs button.active { background: #292e25; color: #e7ebe2; }
 
 @media (max-width: 1023px) {
   .login-grid { grid-template-columns: minmax(0, 1fr); }
@@ -236,6 +239,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .mobile-scope-grid button.active { border-color: rgba(183,230,107,.35); background: rgba(183,230,107,.08); color: #ceee9e; }
 
   .admin-panel { padding-bottom: 8px; }.admin-header { min-height: 68px; padding-inline: 14px; }.admin-header .primary-button { width: 44px; padding: 0; }.admin-header .primary-button span { display: none; }
+  .admin-section-tabs { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }.admin-section-tabs button { justify-content: center; min-height: 40px; }
   .admin-grid { gap: 14px; padding: 14px; }.member-row { min-height: 64px; padding: .65rem .8rem; }
   .member-detail-head { flex-wrap: wrap; }.member-detail-head > span:last-child { margin-left: 58px; }
   .admin-area-row { align-items: flex-start; flex-wrap: wrap; }.admin-area-row > span:last-child { width: 100%; margin-left: 22px; }.admin-access-select { width: 100%; min-height: 44px; font-size: 14px; }

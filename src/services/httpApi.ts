@@ -1,4 +1,4 @@
-import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Session } from '../types'
+import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Sensitivity, Session } from '../types'
 
 const defaultApiUrl = import.meta.env.DEV ? 'http://localhost:3000/v1' : '/api/v1'
 const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '')
@@ -21,7 +21,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 type ContextResponse = {
   organization: { slug: string; name: string }
   user: { id: string; email: string; name?: string; role: 'member' | 'admin' | 'superadmin'; tenant: string }
-  areas: Array<{ key: string; name: string; description?: string; access: AccessLevel; note_count: number }>
+  areas: Array<{ key: string; name: string; description?: string; access: AccessLevel; default_sensitivity?: Sensitivity; note_count: number }>
 }
 
 type RawNote = {
@@ -55,6 +55,7 @@ function mapContext(context: ContextResponse): { session: Session; areas: Area[]
     areas: context.areas.map((area, index) => ({
       key: area.key, name: area.name, description: area.description ?? '', access: area.access,
       noteCount: area.note_count, color: colors[index % colors.length],
+      defaultSensitivity: area.default_sensitivity ?? 'public_org',
     })),
   }
 }
@@ -80,7 +81,7 @@ function mapNote(raw: RawNote): Note {
 function mapMember(raw: RawMember): Member {
   return {
     id: raw._id, name: raw.name ?? raw.email.split('@')[0], email: raw.email,
-    role: raw.role === 'member' ? 'member' : 'admin', status: raw.status === 'invited' ? 'invited' : 'active',
+    role: raw.role, status: raw.status,
     memberships: Object.fromEntries((raw.memberships ?? []).map((membership) => [membership.area, membership.access])),
   }
 }
@@ -108,6 +109,20 @@ export const httpApi = {
     return versions.map((version) => ({ version: version.version, title: version.title, body: version.body, editedAt: version.edited_at ?? '', editedBy: version.edited_by ?? 'Usuario' }))
   },
   async getMembers(): Promise<Member[]> { return (await request<RawMember[]>('/users')).map(mapMember) },
+  async createArea(input: { key: string; name: string; description: string; defaultSensitivity: Sensitivity }): Promise<Area> {
+    await request('/areas', { method: 'POST', body: JSON.stringify({ key: input.key, name: input.name, description: input.description, default_sensitivity: input.defaultSensitivity, tenant: 'current' }) })
+    cachedContext = await request<ContextResponse>('/knowledge/context')
+    const area = mapContext(cachedContext).areas.find((item) => item.key === input.key)
+    if (!area) throw new Error('El área se creó, pero no pudo cargarse en el contexto.')
+    return area
+  },
+  async saveArea(key: string, input: { name: string; description: string; defaultSensitivity: Sensitivity }): Promise<Area> {
+    await request(`/areas/${encodeURIComponent(key)}`, { method: 'PATCH', body: JSON.stringify({ name: input.name, description: input.description, default_sensitivity: input.defaultSensitivity }) })
+    cachedContext = await request<ContextResponse>('/knowledge/context')
+    const area = mapContext(cachedContext).areas.find((item) => item.key === key)
+    if (!area) throw new Error('El área se actualizó, pero no pudo cargarse en el contexto.')
+    return area
+  },
   async saveNote(id: string, patch: Partial<Note>, baseVersion: number): Promise<Note> {
     try {
       const raw = await request<RawNote>(`/knowledge/notes/${id}`, { method: 'PATCH', body: JSON.stringify({ base_version: baseVersion, title: patch.title, body: patch.body, sensitivity: patch.sensitivity, visible_to: patch.visibleTo }) })
@@ -137,6 +152,6 @@ export const httpApi = {
     if (member.id.includes('-')) {
       return mapMember(await request<RawMember>('/users/invite', { method: 'POST', body: JSON.stringify({ email: member.email, name: member.name, role: member.role, memberships }) }))
     }
-    return mapMember(await request<RawMember>(`/users/${member.id}`, { method: 'PATCH', body: JSON.stringify({ name: member.name, role: member.role, memberships }) }))
+    return mapMember(await request<RawMember>(`/users/${member.id}`, { method: 'PATCH', body: JSON.stringify({ name: member.name, role: member.role, status: member.status, memberships }) }))
   },
 }

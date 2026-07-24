@@ -1,6 +1,8 @@
 export type AccessLevel = 'read' | 'write' | 'manage'
 export type NoteKind = 'note' | 'index' | 'log'
 export type Sensitivity = 'public_org' | 'internal_area' | 'confidential'
+export type UserRole = 'member' | 'admin' | 'superadmin'
+export type UserStatus = 'active' | 'invited' | 'inactive'
 
 export interface Area {
   key: string
@@ -9,6 +11,7 @@ export interface Area {
   color: string
   access: AccessLevel
   noteCount: number
+  defaultSensitivity: Sensitivity
 }
 
 export interface NoteVersion {
@@ -51,8 +54,8 @@ export interface Member {
   id: string
   name: string
   email: string
-  role: 'member' | 'admin'
-  status: 'active' | 'invited'
+  role: UserRole
+  status: UserStatus
   memberships: Record<string, AccessLevel>
 }
 
@@ -62,7 +65,7 @@ export interface Session {
   name: string
   tenant: string
   organizationName: string
-  role: 'member' | 'admin'
+  role: UserRole
 }
 
 export interface WikiLink {

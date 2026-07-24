@@ -17,6 +17,7 @@ export const initialAreas: Area[] = [
     color: '#b7e66b',
     access: 'manage',
     noteCount: 6,
+    defaultSensitivity: 'internal_area',
   },
   {
     key: 'product',
@@ -25,6 +26,7 @@ export const initialAreas: Area[] = [
     color: '#76b7ff',
     access: 'write',
     noteCount: 4,
+    defaultSensitivity: 'public_org',
   },
   {
     key: 'operations',
@@ -33,6 +35,7 @@ export const initialAreas: Area[] = [
     color: '#e9a86f',
     access: 'read',
     noteCount: 2,
+    defaultSensitivity: 'internal_area',
   },
 ]
 

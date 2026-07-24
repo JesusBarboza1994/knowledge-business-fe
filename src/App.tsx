@@ -10,7 +10,7 @@ export default function App() {
 
   const areas = useQuery({ queryKey: ['areas'], queryFn: api.getAreas, enabled: Boolean(session) })
   const notes = useQuery({ queryKey: ['notes'], queryFn: api.getNotes, enabled: Boolean(session) })
-  const members = useQuery({ queryKey: ['members'], queryFn: api.getMembers, enabled: Boolean(session) && session?.role === 'admin' })
+  const members = useQuery({ queryKey: ['members'], queryFn: api.getMembers, enabled: Boolean(session) && session?.role !== 'member' })
 
   useEffect(() => {
     void api.getSession().then(setSession).catch(() => setSession(null))

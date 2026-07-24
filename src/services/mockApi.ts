@@ -1,17 +1,26 @@
 import { initialAreas, initialMembers, initialNotes, mockSession } from '../data/mockData'
-import type { Area, DeleteNoteResult, Member, Note, Session } from '../types'
+import type { Area, DeleteNoteResult, Member, Note, Sensitivity, Session } from '../types'
 import { extractWikiLinks, unlinkNoteReferences } from '../lib/wiki'
 
 const STORAGE_KEY = 'knowledge-hub-mock-state-v1'
 
-interface Database { notes: Note[]; members: Member[] }
+interface Database { notes: Note[]; members: Member[]; areas: Area[] }
 
 const delay = (ms = 180) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function load(): Database {
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (!stored) return { notes: structuredClone(initialNotes), members: structuredClone(initialMembers) }
-  try { return JSON.parse(stored) as Database } catch { return { notes: structuredClone(initialNotes), members: structuredClone(initialMembers) } }
+  if (!stored) return { notes: structuredClone(initialNotes), members: structuredClone(initialMembers), areas: structuredClone(initialAreas) }
+  try {
+    const parsed = JSON.parse(stored) as Partial<Database>
+    return {
+      notes: parsed.notes ?? structuredClone(initialNotes),
+      members: parsed.members ?? structuredClone(initialMembers),
+      areas: parsed.areas ?? structuredClone(initialAreas),
+    }
+  } catch {
+    return { notes: structuredClone(initialNotes), members: structuredClone(initialMembers), areas: structuredClone(initialAreas) }
+  }
 }
 
 function persist(db: Database) { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)) }
@@ -24,9 +33,28 @@ export const mockApi = {
   },
   async getSession(): Promise<Session> { await delay(80); return structuredClone(mockSession) },
   async logout(): Promise<void> { await delay(80) },
-  async getAreas(): Promise<Area[]> { await delay(); return structuredClone(initialAreas) },
+  async getAreas(): Promise<Area[]> { await delay(); return structuredClone(load().areas) },
   async getNotes(): Promise<Note[]> { await delay(); return load().notes },
   async getMembers(): Promise<Member[]> { await delay(); return load().members },
+  async createArea(input: { key: string; name: string; description: string; defaultSensitivity: Sensitivity }): Promise<Area> {
+    await delay()
+    const db = load()
+    if (db.areas.some((area) => area.key === input.key)) throw new Error('Ya existe un área con esa clave.')
+    const palette = ['#b7e66b', '#76b7ff', '#e9a86f', '#c49af1', '#6dd6c8', '#ef8da1']
+    const area: Area = { ...input, color: palette[db.areas.length % palette.length], access: 'manage', noteCount: 0 }
+    db.areas.push(area)
+    persist(db)
+    return area
+  },
+  async saveArea(key: string, input: { name: string; description: string; defaultSensitivity: Sensitivity }): Promise<Area> {
+    await delay()
+    const db = load()
+    const index = db.areas.findIndex((area) => area.key === key)
+    if (index < 0) throw new Error('El área ya no existe.')
+    db.areas[index] = { ...db.areas[index], ...input }
+    persist(db)
+    return db.areas[index]
+  },
   async getVersions(ref: string) { await delay(); return load().notes.find((note) => note.slug === ref || note.id === ref)?.versions ?? [] },
   async saveNote(id: string, patch: Partial<Note>, baseVersion: number): Promise<Note> {
     await delay(260)

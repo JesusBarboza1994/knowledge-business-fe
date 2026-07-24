@@ -12,7 +12,7 @@ type MainView = 'note' | 'graph' | 'admin'
 interface Props { session: Session; initialAreas: Area[]; initialNotes: Note[]; initialMembers: Member[]; onLogout: () => void }
 
 export function Workspace({ session, initialAreas, initialNotes, initialMembers, onLogout }: Props) {
-  const [areas] = useState(initialAreas)
+  const [areas, setAreas] = useState(initialAreas)
   const [notes, setNotes] = useState(initialNotes)
   const [members, setMembers] = useState(initialMembers)
   const [activeArea, setActiveArea] = useState(initialAreas[0]?.key ?? '')
@@ -77,7 +77,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
       <nav className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1 border-b border-line px-3 py-2"><button className={`nav-mode ${view === 'note' ? 'active' : ''}`} onClick={() => setView('note')}><LayoutPanelLeft size={14} /> Notas</button><button className={`nav-mode ${view === 'graph' ? 'active' : ''}`} onClick={() => setView('graph')}><GitGraph size={14} /> Grafo</button></div>
         <div className="min-h-0 flex-1 overflow-auto px-2 py-3"><div className="mb-2 flex items-center justify-between px-2"><p className="sidebar-label !mb-0">{query ? 'Resultados' : 'Documentos'}</p>{canEdit && <button className="text-muted hover:text-moss" title="Nueva nota" onClick={() => setNewNoteOpen(true)}><CirclePlus size={15} /></button>}</div>{filteredNotes.length ? filteredNotes.map((note) => <button key={note.id} className={`note-row ${selectedId === note.id && view === 'note' ? 'active' : ''}`} onMouseEnter={() => setHoveredNoteSlug(note.slug)} onMouseLeave={() => setHoveredNoteSlug(undefined)} onFocus={() => setHoveredNoteSlug(note.slug)} onBlur={() => setHoveredNoteSlug(undefined)} onClick={() => openNote(note.id)}>{note.kind === 'index' ? <BookOpen size={14} /> : note.kind === 'log' ? <FileClock size={14} /> : <File size={14} />}<span className="truncate">{note.title}</span>{note.sensitivity === 'confidential' && <Shield size={11} className="ml-auto" />}</button>) : <div className="px-3 py-8 text-center text-xs text-muted">No encontramos notas.</div>}</div>
-        <div className="border-t border-line p-2">{session.role === 'admin' && <button className={`bottom-nav ${view === 'admin' ? 'active' : ''}`} onClick={() => setView('admin')}><Settings2 size={15} /> Administrar organización</button>}<button className="bottom-nav" onClick={onLogout}><LogOut size={15} /> Cerrar sesión</button></div>
+        <div className="border-t border-line p-2">{session.role !== 'member' && <button className={`bottom-nav ${view === 'admin' ? 'active' : ''}`} onClick={() => setView('admin')}><Settings2 size={15} /> Administrar organización</button>}<button className="bottom-nav" onClick={onLogout}><LogOut size={15} /> Cerrar sesión</button></div>
       </nav>
     </aside>
 
@@ -93,7 +93,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {view === 'admin' ? <AdminPanel members={members} areas={areas} onMemberSaved={(member) => setMembers((current) => current.some((item) => item.id === member.id) ? current.map((item) => item.id === member.id ? member : item) : [...current, member])} />
+        {view === 'admin' ? <AdminPanel currentUserId={session.userId} members={members} areas={areas} onMemberSaved={(member) => setMembers((current) => current.some((item) => item.id === member.id) ? current.map((item) => item.id === member.id ? member : item) : [...current, member])} onAreaSaved={(saved, created) => { setAreas((current) => current.some((item) => item.key === saved.key) ? current.map((item) => item.key === saved.key ? saved : item) : [...current, saved]); if (created) void api.getNotes().then(setNotes) }} />
           : view === 'graph' ? <KnowledgeGraph notes={notes} areas={areas} selectedNote={selectedNote} hoveredNoteSlug={hoveredNoteSlug} onOpenNote={openNote} />
             : selectedNote ? <MarkdownEditor note={selectedNote} notes={notes} areas={areas} canEdit={canEdit} onSaved={(saved) => setNotes((current) => current.map((note) => note.id === saved.id ? saved : note))} onOpenNote={openNote} />
               : <EmptyState onCreate={() => setNewNoteOpen(true)} canEdit={Boolean(canEdit)} />}
@@ -110,7 +110,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
         <div className="mobile-sheet-handle" />
         <div className="mobile-sheet-head"><div><p className="eyebrow">Opciones</p><h2>Más acciones</h2></div><button className="icon-button" aria-label="Cerrar opciones" onClick={() => setMobileMore(false)}><X size={18} /></button></div>
         {view !== 'admin' && <button className="mobile-sheet-action" onClick={() => { setMobileMore(false); setMobileInspector(true) }}><Info size={18} /><span><strong>Contexto de la nota</strong><small>Propiedades, enlaces y backlinks</small></span></button>}
-        {session.role === 'admin' && <button className="mobile-sheet-action" onClick={() => { setView('admin'); setMobileMore(false) }}><Settings2 size={18} /><span><strong>Administrar organización</strong><small>Personas y permisos por área</small></span></button>}
+        {session.role !== 'member' && <button className="mobile-sheet-action" onClick={() => { setView('admin'); setMobileMore(false) }}><Settings2 size={18} /><span><strong>Administrar organización</strong><small>Personas, áreas y permisos</small></span></button>}
         <button className="mobile-sheet-action danger" onClick={onLogout}><LogOut size={18} /><span><strong>Cerrar sesión</strong><small>Salir de Knowledge Hub</small></span></button>
       </section>
     </div>}
