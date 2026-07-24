@@ -6,6 +6,7 @@ import { MarkdownEditor } from './MarkdownEditor'
 import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
 import { api } from '../services/api'
 import type { Area, Member, Note, Session } from '../types'
+import { BrandMark } from './BrandMark'
 
 type MainView = 'note' | 'graph' | 'admin'
 
@@ -71,7 +72,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
   return <div className="workspace-root flex h-screen overflow-hidden bg-ink text-stone-200">
     {mobileNav && <button className="mobile-drawer-backdrop" aria-label="Cerrar explorador" onClick={() => setMobileNav(false)} />}
     <aside className={`workspace-sidebar ${mobileNav ? 'mobile-open' : ''}`}>
-      <div className="flex min-h-[62px] items-center gap-3 border-b border-line px-4"><div className="grid h-8 w-8 place-items-center rounded-lg bg-moss/10 text-moss"><Network size={17} /></div><div className="min-w-0 flex-1"><strong className="block truncate text-sm">{session.organizationName}</strong><span className="block truncate text-[11px] text-muted">{session.tenant}.knowledge</span></div><button className="icon-button lg:hidden" aria-label="Cerrar explorador" onClick={() => setMobileNav(false)}><X size={16} /></button></div>
+      <div className="flex min-h-[62px] items-center gap-3 border-b border-line px-4"><BrandMark className="h-8 w-8" /><div className="min-w-0 flex-1"><strong className="block truncate text-sm">Knowvault</strong><span className="block truncate text-[11px] text-muted">{session.organizationName}</span></div><button className="icon-button lg:hidden" aria-label="Cerrar explorador" onClick={() => setMobileNav(false)}><X size={16} /></button></div>
       <div className="border-b border-line p-3"><label className="sidebar-search"><Search size={14} /><input placeholder="Buscar notas…" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd>⌘K</kbd></label></div>
       <div className="border-b border-line p-3"><p className="sidebar-label">Área actual</p><div className="relative"><select className="area-select" value={activeArea} onChange={(event) => switchArea(event.target.value)}>{areas.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select><span className="area-color" style={{ backgroundColor: area?.color }} /><ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" /></div><div className="mt-2 flex items-center justify-between px-1 text-[10px] text-muted"><span>{area?.noteCount} notas</span><span className="uppercase tracking-wider">Acceso: {area?.access}</span></div></div>
       <nav className="flex min-h-0 flex-1 flex-col">
@@ -111,7 +112,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
         <div className="mobile-sheet-head"><div><p className="eyebrow">Opciones</p><h2>Más acciones</h2></div><button className="icon-button" aria-label="Cerrar opciones" onClick={() => setMobileMore(false)}><X size={18} /></button></div>
         {view !== 'admin' && <button className="mobile-sheet-action" onClick={() => { setMobileMore(false); setMobileInspector(true) }}><Info size={18} /><span><strong>Contexto de la nota</strong><small>Propiedades, enlaces y backlinks</small></span></button>}
         {session.role !== 'member' && <button className="mobile-sheet-action" onClick={() => { setView('admin'); setMobileMore(false) }}><Settings2 size={18} /><span><strong>Administrar organización</strong><small>Personas, áreas y permisos</small></span></button>}
-        <button className="mobile-sheet-action danger" onClick={onLogout}><LogOut size={18} /><span><strong>Cerrar sesión</strong><small>Salir de Knowledge Hub</small></span></button>
+        <button className="mobile-sheet-action danger" onClick={onLogout}><LogOut size={18} /><span><strong>Cerrar sesión</strong><small>Salir de Knowvault</small></span></button>
       </section>
     </div>}
     {mobileInspector && <div className="mobile-sheet-backdrop" onClick={() => setMobileInspector(false)}>

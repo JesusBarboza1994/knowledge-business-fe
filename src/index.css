@@ -10,6 +10,8 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: #11130f; }
 button, input, textarea, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 .workspace-root { height: 100dvh; }
+.brand-mark { display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(183, 230, 107, .16); border-radius: 10px; background: #10120f; box-shadow: inset 0 1px rgba(255,255,255,.035), 0 0 18px rgba(183,230,107,.035); }
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; }
 
 @layer components {
   .field-label { @apply mb-2 block text-xs font-medium text-stone-300; }

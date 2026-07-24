@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowRight, Eye, EyeOff, Network, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react'
 import { api } from '../services/api'
 import type { Session } from '../types'
+import { BrandMark } from './BrandMark'
 
 export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) {
   const [email, setEmail] = useState('')
@@ -22,8 +23,8 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
       <section className="relative hidden border-r border-line lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="login-orb" />
         <div className="relative z-10 flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl border border-moss/30 bg-moss/10 text-moss"><Network size={20} /></div>
-          <div><div className="font-semibold tracking-tight">Knowledge Hub</div><div className="text-xs text-muted">MenteMente</div></div>
+          <BrandMark className="h-10 w-10" />
+          <div><div className="font-semibold tracking-tight">Knowvault</div><div className="text-xs text-muted">MenteMente</div></div>
         </div>
         <div className="relative z-10 max-w-xl">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-moss/20 bg-moss/5 px-3 py-1.5 text-xs text-moss"><Sparkles size={13} /> Conocimiento que conserva su contexto</div>
@@ -38,7 +39,7 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
 
       <section className="login-panel flex items-center justify-center px-6 py-12 sm:px-12">
         <div className="login-form w-full max-w-sm">
-          <div className="login-mobile-brand mb-10 flex items-center gap-3 lg:hidden"><div className="grid h-11 w-11 place-items-center rounded-xl border border-moss/15 bg-moss/10 text-moss"><Network size={21} /></div><div><span className="block font-semibold">Knowledge Hub</span><span className="text-xs text-muted">MenteMente</span></div></div>
+          <div className="login-mobile-brand mb-10 flex items-center gap-3 lg:hidden"><BrandMark className="h-11 w-11" /><div><span className="block font-semibold">Knowvault</span><span className="text-xs text-muted">MenteMente</span></div></div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-moss">Bienvenido</p>
           <h2 className="text-3xl font-medium tracking-tight">Entra a tu organización</h2>
           <p className="mt-3 text-sm leading-6 text-muted">Tu organización y tus áreas se cargarán automáticamente.</p>
