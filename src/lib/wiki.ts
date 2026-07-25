@@ -107,14 +107,3 @@ export function resolveNoteHref(href: string | undefined, source: Note, notes: N
   return extractNoteLinks(source, notes).find((link) => slugify(link.title) === reference)
 }
 
-export function unlinkNoteReferences(body: string, note: Pick<Note, 'slug' | 'title'>) {
-  const references = new Set([note.slug, slugify(note.title)])
-  let removedLinks = 0
-  const nextBody = body.replace(/\[\[([^\]]+)\]\]/g, (full, inner: string) => {
-    const [name] = inner.split('#')
-    if (!references.has(slugify(name))) return full
-    removedLinks += 1
-    return name.trim()
-  })
-  return { body: nextBody, removedLinks }
-}

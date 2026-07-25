@@ -7,7 +7,6 @@ import {
   resolveInternalNoteHref,
   slugify,
   uniqueLinks,
-  unlinkNoteReferences,
   wikiLinkCompletion,
 } from './wiki'
 import { initialNotes } from '../data/mockData'
@@ -37,6 +36,25 @@ describe('wiki helpers', () => {
     }
 
     expect(extractNoteLinks(source, initialNotes).at(0)?.target?.id).toBe(target.id)
+  })
+
+  it('deriva las conexiones de los outlinks cuando la nota llega sin cuerpo', () => {
+    const target = initialNotes.find((note) => note.slug === 'arquitectura-actual')!
+    const mapped = {
+      ...initialNotes[0],
+      body: '',
+      outlinks: [
+        { display: 'Arquitectura actual', targetId: target.id, targetSlug: target.slug, access: 'accessible' as const },
+        { display: 'Presupuesto', targetId: undefined, targetSlug: undefined, access: 'restricted' as const },
+      ],
+    }
+
+    const links = extractNoteLinks(mapped, initialNotes)
+
+    expect(links).toHaveLength(2)
+    expect(links[0].target?.id).toBe(target.id)
+    expect(links[1].target).toBeUndefined()
+    expect(links[1].restricted).toBe(true)
   })
 
   it('diferencia una conexión restringida de una referencia inexistente', () => {
@@ -77,15 +95,5 @@ describe('wiki helpers', () => {
     expect(wikiLinkCompletion('mms-payments', ']]')).toBe('mms-payments')
     expect(wikiLinkCompletion('mms-payments', ']')).toBe('mms-payments]')
     expect(wikiLinkCompletion('mms-payments', '')).toBe('mms-payments]]')
-  })
-
-  it('rompe referencias convirtiéndolas en texto plano', () => {
-    expect(unlinkNoteReferences(
-      'Depende de [[Arquitectura actual]] y [[Modelo de datos]].',
-      { slug: 'arquitectura-actual', title: 'Arquitectura actual' },
-    )).toEqual({
-      body: 'Depende de Arquitectura actual y [[Modelo de datos]].',
-      removedLinks: 1,
-    })
   })
 })

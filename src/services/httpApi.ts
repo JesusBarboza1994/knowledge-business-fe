@@ -25,7 +25,7 @@ type ContextResponse = {
 }
 
 type RawNote = {
-  id?: string; _id?: string; area: string; slug: string; title: string; kind?: Note['kind']; body: string
+  id?: string; _id?: string; area: string; slug: string; title: string; kind?: Note['kind']; body?: string
   aliases?: string[]
   sensitivity: Note['sensitivity']; visible_to?: string[]; version: number; updated_at?: string; updated_by?: string
   outlinks?: Array<{
@@ -34,6 +34,8 @@ type RawNote = {
   }>
   unresolved?: Array<{ name: string }>
 }
+
+type NotesPage = { items: RawNote[]; total: number; limit: number; truncated: boolean }
 
 type RawMember = {
   _id: string; name?: string; email: string; role: 'member' | 'admin' | 'superadmin'; status: 'active' | 'invited' | 'inactive'
@@ -63,7 +65,7 @@ function mapContext(context: ContextResponse): { session: Session; areas: Area[]
 function mapNote(raw: RawNote): Note {
   return {
     id: raw.id ?? raw._id ?? raw.slug, area: raw.area, slug: raw.slug, title: raw.title, kind: raw.kind ?? 'note',
-    aliases: raw.aliases ?? [], body: raw.body,
+    aliases: raw.aliases ?? [], body: raw.body ?? '',
     sensitivity: raw.sensitivity, visibleTo: raw.visible_to ?? [], version: raw.version,
     outlinks: (raw.outlinks ?? []).map((outlink) => ({
       display: outlink.display,
@@ -103,7 +105,23 @@ export const httpApi = {
     cachedContext ??= await request<ContextResponse>('/knowledge/context')
     return mapContext(cachedContext).areas
   },
-  async getNotes(): Promise<Note[]> { return (await request<RawNote[]>('/knowledge/notes?limit=500')).map(mapNote) },
+  async getNotes(): Promise<Note[]> {
+    const page = await request<NotesPage>('/knowledge/notes?limit=20000')
+    if (page.truncated) {
+      console.warn(`[knowvault] El mapa llegó incompleto: ${page.items.length} de ${page.total} notas. Los enlaces a las notas ausentes se verán como pendientes.`)
+    }
+    return page.items.map(mapNote)
+  },
+  async getNote(ref: string): Promise<Note> {
+    return mapNote(await request<RawNote>(`/knowledge/notes/${encodeURIComponent(ref)}`))
+  },
+
+  async searchNotes(query: string, area?: string): Promise<string[]> {
+    const params = new URLSearchParams({ q: query, limit: '50' })
+    if (area) params.set('area', area)
+    const results = await request<Array<{ slug: string }>>(`/knowledge/search?${params.toString()}`)
+    return results.map((result) => result.slug)
+  },
   async getVersions(ref: string): Promise<NoteVersion[]> {
     const versions = await request<Array<{ version: number; title: string; body: string; edited_at?: string; edited_by?: string }>>(`/knowledge/notes/${encodeURIComponent(ref)}/versions`)
     return versions.map((version) => ({ version: version.version, title: version.title, body: version.body, editedAt: version.edited_at ?? '', editedBy: version.edited_by ?? 'Usuario' }))
@@ -137,13 +155,13 @@ export const httpApi = {
     return mapNote(raw)
   },
   async archiveNote(id: string, baseVersion: number): Promise<DeleteNoteResult> {
-    const result = await request<{ archived: true; broken_connections: number; updated_notes: number }>(
+    const result = await request<{ archived: true; pending_connections: number; updated_notes: number }>(
       `/knowledge/notes/${id}?base_version=${baseVersion}`,
       { method: 'DELETE' },
     )
     return {
       archived: result.archived,
-      brokenConnections: result.broken_connections,
+      pendingConnections: result.pending_connections,
       updatedNotes: result.updated_notes,
     }
   },

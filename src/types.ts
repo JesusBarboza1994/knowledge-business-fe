@@ -79,6 +79,6 @@ export interface WikiLink {
 
 export interface DeleteNoteResult {
   archived: true
-  brokenConnections: number
+  pendingConnections: number
   updatedNotes: number
 }

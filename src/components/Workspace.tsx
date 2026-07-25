@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, ChevronDown, CirclePlus, File, FileClock, FileText, FolderKanban, GitGraph, Info, LayoutPanelLeft, LogOut, Menu, MoreHorizontal, Network, PanelRightClose, PanelRightOpen, Search, Settings2, Shield, Trash2, TriangleAlert, X } from 'lucide-react'
 import { AdminPanel } from './AdminPanel'
 import { KnowledgeGraph } from './KnowledgeGraph'
 import { MarkdownEditor } from './MarkdownEditor'
 import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
+import { useDebounced } from '../lib/useDebounced'
 import { api } from '../services/api'
 import type { Area, Member, Note, Session } from '../types'
 import { BrandMark } from './BrandMark'
@@ -30,10 +32,37 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
   const [deleteNoteOpen, setDeleteNoteOpen] = useState(false)
   const [hoveredNoteSlug, setHoveredNoteSlug] = useState<string>()
 
-  const selectedNote = notes.find((note) => note.id === selectedId)
+  const queryClient = useQueryClient()
+
+
+  const selectedSummary = notes.find((note) => note.id === selectedId)
+  const openNoteQuery = useQuery({
+    queryKey: ['note', selectedSummary?.slug],
+    queryFn: () => api.getNote(selectedSummary!.slug),
+    enabled: Boolean(selectedSummary),
+  })
+  const selectedNote = openNoteQuery.data ?? selectedSummary
+
+  const prefetchNote = useCallback((slug: string) => {
+    void queryClient.prefetchQuery({ queryKey: ['note', slug], queryFn: () => api.getNote(slug) })
+  }, [queryClient])
+
   const area = areas.find((item) => item.key === activeArea)
   const areaNotes = notes.filter((note) => note.area === activeArea && !note.archived)
-  const filteredNotes = areaNotes.filter((note) => `${note.title} ${note.body}`.toLowerCase().includes(query.toLowerCase()))
+
+  const searchTerm = useDebounced(query.trim())
+  const searching = searchTerm.length > 1
+  const search = useQuery({
+    queryKey: ['search', searchTerm, activeArea],
+    queryFn: () => api.searchNotes(searchTerm, activeArea),
+    enabled: searching,
+  })
+  const filteredNotes = useMemo(() => {
+    if (!searching) return areaNotes
+    const rank = new Map((search.data ?? []).map((slug, index) => [slug, index]))
+    return areaNotes.filter((note) => rank.has(note.slug)).sort((a, b) => rank.get(a.slug)! - rank.get(b.slug)!)
+  }, [areaNotes, search.data, searching])
+
   const canEdit = area?.access === 'write' || area?.access === 'manage'
   const selectedArea = areas.find((item) => item.key === selectedNote?.area)
 
@@ -58,12 +87,19 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
 
   async function createNote(title: string) {
     const note = await api.createNote(activeArea, title); setNotes((current) => [note, ...current]); setNewNoteOpen(false)
+    queryClient.setQueryData(['note', note.slug], note)
     setTabs((current) => [...current, note.id]); setSelectedId(note.id); setView('note')
+  }
+
+  function noteSaved(saved: Note) {
+    setNotes((current) => current.map((note) => note.id === saved.id ? saved : note))
+    queryClient.setQueryData(['note', saved.slug], saved)
   }
 
   async function deleteSelected() {
     if (!selectedNote) return
     await api.archiveNote(selectedNote.id, selectedNote.version)
+    queryClient.removeQueries({ queryKey: ['note', selectedNote.slug] })
     setNotes(await api.getNotes())
     setDeleteNoteOpen(false)
     closeTab(selectedNote.id)
@@ -77,7 +113,7 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
       <div className="border-b border-line p-3"><p className="sidebar-label">Área actual</p><div className="relative"><select className="area-select" value={activeArea} onChange={(event) => switchArea(event.target.value)}>{areas.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select><span className="area-color" style={{ backgroundColor: area?.color }} /><ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" /></div><div className="mt-2 flex items-center justify-between px-1 text-[10px] text-muted"><span>{area?.noteCount} notas</span><span className="uppercase tracking-wider">Acceso: {area?.access}</span></div></div>
       <nav className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1 border-b border-line px-3 py-2"><button className={`nav-mode ${view === 'note' ? 'active' : ''}`} onClick={() => setView('note')}><LayoutPanelLeft size={14} /> Notas</button><button className={`nav-mode ${view === 'graph' ? 'active' : ''}`} onClick={() => setView('graph')}><GitGraph size={14} /> Grafo</button></div>
-        <div className="min-h-0 flex-1 overflow-auto px-2 py-3"><div className="mb-2 flex items-center justify-between px-2"><p className="sidebar-label !mb-0">{query ? 'Resultados' : 'Documentos'}</p>{canEdit && <button className="text-muted hover:text-moss" title="Nueva nota" onClick={() => setNewNoteOpen(true)}><CirclePlus size={15} /></button>}</div>{filteredNotes.length ? filteredNotes.map((note) => <button key={note.id} className={`note-row ${selectedId === note.id && view === 'note' ? 'active' : ''}`} onMouseEnter={() => setHoveredNoteSlug(note.slug)} onMouseLeave={() => setHoveredNoteSlug(undefined)} onFocus={() => setHoveredNoteSlug(note.slug)} onBlur={() => setHoveredNoteSlug(undefined)} onClick={() => openNote(note.id)}>{note.kind === 'index' ? <BookOpen size={14} /> : note.kind === 'log' ? <FileClock size={14} /> : <File size={14} />}<span className="truncate">{note.title}</span>{note.sensitivity === 'confidential' && <Shield size={11} className="ml-auto" />}</button>) : <div className="px-3 py-8 text-center text-xs text-muted">No encontramos notas.</div>}</div>
+        <div className="min-h-0 flex-1 overflow-auto px-2 py-3"><div className="mb-2 flex items-center justify-between px-2"><p className="sidebar-label !mb-0">{query ? 'Resultados' : 'Documentos'}</p>{canEdit && <button className="text-muted hover:text-moss" title="Nueva nota" onClick={() => setNewNoteOpen(true)}><CirclePlus size={15} /></button>}</div>{filteredNotes.length ? filteredNotes.map((note) => <button key={note.id} className={`note-row ${selectedId === note.id && view === 'note' ? 'active' : ''}`} onMouseEnter={() => { setHoveredNoteSlug(note.slug); prefetchNote(note.slug) }} onMouseLeave={() => setHoveredNoteSlug(undefined)} onFocus={() => { setHoveredNoteSlug(note.slug); prefetchNote(note.slug) }} onBlur={() => setHoveredNoteSlug(undefined)} onClick={() => openNote(note.id)}>{note.kind === 'index' ? <BookOpen size={14} /> : note.kind === 'log' ? <FileClock size={14} /> : <File size={14} />}<span className="truncate">{note.title}</span>{note.sensitivity === 'confidential' && <Shield size={11} className="ml-auto" />}</button>) : <div className="px-3 py-8 text-center text-xs text-muted">No encontramos notas.</div>}</div>
         <div className="border-t border-line p-2">{session.role !== 'member' && <button className={`bottom-nav ${view === 'admin' ? 'active' : ''}`} onClick={() => setView('admin')}><Settings2 size={15} /> Administrar organización</button>}<button className="bottom-nav" onClick={onLogout}><LogOut size={15} /> Cerrar sesión</button></div>
       </nav>
     </aside>
@@ -96,8 +132,9 @@ export function Workspace({ session, initialAreas, initialNotes, initialMembers,
       <div className="flex min-h-0 flex-1">
         {view === 'admin' ? <AdminPanel currentUserId={session.userId} members={members} areas={areas} onMemberSaved={(member) => setMembers((current) => current.some((item) => item.id === member.id) ? current.map((item) => item.id === member.id ? member : item) : [...current, member])} onAreaSaved={(saved, created) => { setAreas((current) => current.some((item) => item.key === saved.key) ? current.map((item) => item.key === saved.key ? saved : item) : [...current, saved]); if (created) void api.getNotes().then(setNotes) }} />
           : view === 'graph' ? <KnowledgeGraph notes={notes} areas={areas} selectedNote={selectedNote} hoveredNoteSlug={hoveredNoteSlug} onOpenNote={openNote} />
-            : selectedNote ? <MarkdownEditor note={selectedNote} notes={notes} areas={areas} canEdit={canEdit} onSaved={(saved) => setNotes((current) => current.map((note) => note.id === saved.id ? saved : note))} onOpenNote={openNote} />
-              : <EmptyState onCreate={() => setNewNoteOpen(true)} canEdit={Boolean(canEdit)} />}
+            : openNoteQuery.data ? <MarkdownEditor note={openNoteQuery.data} notes={notes} areas={areas} canEdit={canEdit} onSaved={noteSaved} onOpenNote={openNote} />
+              : selectedSummary ? <div className="grid flex-1 place-items-center text-sm text-muted"><span className="flex items-center gap-3">{openNoteQuery.isError ? 'No se pudo abrir la nota.' : <><span className="loader" /> Abriendo {selectedSummary.title}…</>}</span></div>
+                : <EmptyState onCreate={() => setNewNoteOpen(true)} canEdit={Boolean(canEdit)} />}
         {rightOpen && view !== 'admin' && <Inspector note={selectedNote} notes={notes} areas={areas} onOpenNote={openNote} onGraph={() => setView('graph')} onDelete={() => setDeleteNoteOpen(true)} canDelete={selectedArea?.access === 'manage'} />}
       </div>
     </main>
@@ -175,7 +212,7 @@ function DeleteNoteDialog({ note, notes, onClose, onConfirm }: { note: Note; not
     try { await onConfirm() }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo eliminar la nota.'); setLoading(false) }
   }
-  return <div className="modal-backdrop"><div className="modal-card max-w-lg p-6"><div className="flex items-start gap-4"><div className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-red-400/20 bg-red-400/10 text-red-300"><TriangleAlert size={19} /></div><div><p className="eyebrow text-red-300">Acción destructiva</p><h2 className="mt-1 text-xl font-medium">Eliminar “{note.title}”</h2><p className="mt-3 text-sm leading-6 text-muted">La nota dejará de estar disponible. Sus referencias en otras notas se convertirán en texto plano para que no queden enlaces pendientes.</p></div></div><div className="mt-5 grid grid-cols-3 gap-2 rounded-lg border border-line bg-ink/50 p-3 text-center"><div><strong className="block text-base text-stone-100">{incoming}</strong><span className="text-[10px] text-muted">Referencias entrantes</span></div><div><strong className="block text-base text-stone-100">{outgoing}</strong><span className="text-[10px] text-muted">Enlaces salientes</span></div><div><strong className="block text-base text-red-300">{total}</strong><span className="text-[10px] text-muted">Conexiones rotas</span></div></div>{error && <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">{error}</p>}<div className="mt-6 flex justify-end gap-3"><button className="secondary-button" onClick={onClose} disabled={loading}>Cancelar</button><button className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-400 px-4 text-xs font-semibold text-[#2a0b0b] transition hover:bg-red-300 disabled:opacity-50" onClick={() => void confirm()} disabled={loading}>{loading ? <span className="loader dark" /> : <><Trash2 size={14} /> Eliminar y romper conexiones</>}</button></div></div></div>
+  return <div className="modal-backdrop"><div className="modal-card max-w-lg p-6"><div className="flex items-start gap-4"><div className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-red-400/20 bg-red-400/10 text-red-300"><TriangleAlert size={19} /></div><div><p className="eyebrow text-red-300">Acción destructiva</p><h2 className="mt-1 text-xl font-medium">Eliminar “{note.title}”</h2><p className="mt-3 text-sm leading-6 text-muted">La nota dejará de estar disponible. Las referencias que otras notas le hacen se quedarán como enlaces pendientes: si vuelves a crearla con el mismo nombre, se reconectan solas.</p></div></div><div className="mt-5 grid grid-cols-3 gap-2 rounded-lg border border-line bg-ink/50 p-3 text-center"><div><strong className="block text-base text-stone-100">{incoming}</strong><span className="text-[10px] text-muted">Referencias entrantes</span></div><div><strong className="block text-base text-stone-100">{outgoing}</strong><span className="text-[10px] text-muted">Enlaces salientes</span></div><div><strong className="block text-base text-red-300">{total}</strong><span className="text-[10px] text-muted">Conexiones afectadas</span></div></div>{error && <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/5 px-3 py-2 text-sm text-red-300">{error}</p>}<div className="mt-6 flex justify-end gap-3"><button className="secondary-button" onClick={onClose} disabled={loading}>Cancelar</button><button className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-400 px-4 text-xs font-semibold text-[#2a0b0b] transition hover:bg-red-300 disabled:opacity-50" onClick={() => void confirm()} disabled={loading}>{loading ? <span className="loader dark" /> : <><Trash2 size={14} /> Archivar nota</>}</button></div></div></div>
 }
 
 function EmptyState({ onCreate, canEdit }: { onCreate: () => void; canEdit: boolean }) { return <div className="grid flex-1 place-items-center"><div className="max-w-sm text-center"><FolderKanban size={28} className="mx-auto text-muted" /><h2 className="mt-4 font-medium">Tu espacio está listo</h2><p className="mt-2 text-sm text-muted">Abre una nota desde el explorador o recorre sus conexiones desde el grafo.</p>{canEdit && <button className="primary-button mx-auto mt-5" onClick={onCreate}><CirclePlus size={15} /> Crear nota</button>}</div></div> }

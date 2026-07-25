@@ -1,6 +1,6 @@
 import { initialAreas, initialMembers, initialNotes, mockSession } from '../data/mockData'
 import type { Area, DeleteNoteResult, Member, Note, Sensitivity, Session } from '../types'
-import { extractWikiLinks, unlinkNoteReferences } from '../lib/wiki'
+import { extractWikiLinks } from '../lib/wiki'
 
 const STORAGE_KEY = 'knowledge-hub-mock-state-v1'
 
@@ -34,7 +34,21 @@ export const mockApi = {
   async getSession(): Promise<Session> { await delay(80); return structuredClone(mockSession) },
   async logout(): Promise<void> { await delay(80) },
   async getAreas(): Promise<Area[]> { await delay(); return structuredClone(load().areas) },
-  async getNotes(): Promise<Note[]> { await delay(); return load().notes },
+  async getNotes(): Promise<Note[]> { await delay(); return load().notes.map((note) => ({ ...note, body: '' })) },
+  async getNote(ref: string): Promise<Note> {
+    await delay(90)
+    const note = load().notes.find((item) => item.slug === ref || item.id === ref)
+    if (!note) throw new Error('La nota ya no existe.')
+    return note
+  },
+  async searchNotes(query: string, area?: string): Promise<string[]> {
+    await delay(90)
+    const term = query.toLowerCase()
+    return load().notes
+      .filter((note) => !note.archived && (!area || note.area === area))
+      .filter((note) => `${note.title} ${note.body}`.toLowerCase().includes(term))
+      .map((note) => note.slug)
+  },
   async getMembers(): Promise<Member[]> { await delay(); return load().members },
   async createArea(input: { key: string; name: string; description: string; defaultSensitivity: Sensitivity }): Promise<Area> {
     await delay()
@@ -87,34 +101,17 @@ export const mockApi = {
     const db = load()
     const note = db.notes.find((item) => item.id === id)
     if (!note) throw new Error('La nota ya no existe.')
-    const outgoing = extractWikiLinks(note.body, db.notes).length
-    let inbound = 0
-    let updatedNotes = 0
-    db.notes = db.notes.map((source) => {
-      if (source.id === id || source.archived) return source
-      const unlinked = unlinkNoteReferences(source.body, note)
-      if (!unlinked.removedLinks) return source
-      inbound += unlinked.removedLinks
-      updatedNotes += 1
-      return {
-        ...source,
-        body: unlinked.body,
-        version: source.version + 1,
-        updatedAt: new Date().toISOString(),
-        updatedBy: mockSession.name,
-        versions: [{
-          version: source.version,
-          title: source.title,
-          body: source.body,
-          editedAt: source.updatedAt,
-          editedBy: source.updatedBy,
-        }, ...source.versions],
-      }
-    })
+    const sources = db.notes.filter(
+      (source) => source.id !== id && !source.archived && extractWikiLinks(source.body, db.notes).some((link) => link.target?.id === id),
+    )
+    const pending = sources.reduce(
+      (total, source) => total + extractWikiLinks(source.body, db.notes).filter((link) => link.target?.id === id).length,
+      0,
+    )
     const target = db.notes.find((item) => item.id === id)
     if (target) target.archived = true
     persist(db)
-    return { archived: true, brokenConnections: inbound + outgoing, updatedNotes }
+    return { archived: true, pendingConnections: pending, updatedNotes: sources.length }
   },
   async saveMember(member: Member): Promise<Member> { await delay(); const db = load(); const index = db.members.findIndex((item) => item.id === member.id); if (index >= 0) db.members[index] = member; else db.members.push(member); persist(db); return member },
   reset() { localStorage.removeItem(STORAGE_KEY) },

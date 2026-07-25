@@ -69,8 +69,7 @@ export function MarkdownEditor({ note, notes, areas, canEdit, onSaved, onOpenNot
       baseVersion.current = saved.version; dirty.current = false; setSaveState('saved'); setConflict(null); onSaved(saved)
     } catch (reason) {
       if (reason instanceof Error && reason.message === 'VERSION_CONFLICT') {
-        const remote = (await api.getNotes()).find((item) => item.id === note.id)
-        if (remote) setConflict(remote)
+        setConflict(await api.getNote(note.slug))
       }
       setSaveState('error')
     }
