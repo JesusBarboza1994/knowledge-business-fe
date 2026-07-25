@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import cytoscape, { type Core, type ElementDefinition } from 'cytoscape'
 import { ArrowUpRight, Check, ChevronDown, Eye, EyeOff, Focus, Layers3, LocateFixed, Search, SlidersHorizontal, Waypoints, X, ZoomIn, ZoomOut } from 'lucide-react'
 import type { Area, Note } from '../types'
+import { fontToken, token } from '../lib/tokens'
 import { extractNoteLinks, uniqueLinks } from '../lib/wiki'
 import { includeSelectionConnection, selectionGraphNotes } from '../lib/graph'
 
@@ -80,7 +81,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       }))
 
     visible.forEach((note) => {
-      const color = areas.find((area) => area.key === note.area)?.color ?? '#b7e66b'
+      const color = areas.find((area) => area.key === note.area)?.color ?? token('accent')
       const isSelected = note.id === selectedNote?.id
       const degree = degrees.get(note.slug) ?? 0
       const baseSize = note.kind === 'index' ? 19 : note.kind === 'log' ? 16 : 13
@@ -122,7 +123,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
               id: restrictedId,
               label: `🔒 ${link.title}`,
               type: 'restricted',
-              color: '#d6a85f',
+              color: token('warn'),
               area: note.area,
               size: 11,
               rank: 18,
@@ -135,7 +136,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
               id: pendingId,
               label: link.title,
               type: 'pending',
-              color: '#747b6f',
+              color: token('muted'),
               area: note.area,
               size: 11,
               rank: 18,
@@ -154,7 +155,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             source: note.slug,
             target,
             type: link.restricted ? 'restricted' : !link.target ? 'unresolved' : crossArea ? 'cross-area' : 'link',
-            color: targetArea?.color ?? '#8ea078',
+            color: targetArea?.color ?? token('muted'),
           },
         })
       })
@@ -283,23 +284,23 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'background-color': 'data(color)',
             'background-opacity': 0.9,
             label: 'data(label)',
-            color: '#dfe4da',
-            'font-family': 'Inter, sans-serif',
-            'font-size': mobileViewport ? '12px' : '9px',
+            color: token('fg'),
+            'font-family': fontToken('font-body'),
+            'font-size': '12px',
             'font-weight': 500,
             'min-zoomed-font-size': mobileViewport ? 0 : 11,
             'text-wrap': 'wrap',
             'text-max-width': '96px',
             'text-valign': 'bottom',
             'text-margin-y': 7,
-            'text-background-color': '#10120e',
+            'text-background-color': token('sunken'),
             'text-background-opacity': 0.9,
             'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle',
             width: 'data(size)',
             height: 'data(size)',
             'border-width': 2,
-            'border-color': '#1b1f18',
+            'border-color': token('ink'),
             'overlay-opacity': 0,
             'transition-property': 'opacity, border-width, border-color, width, height',
             'transition-duration': 140,
@@ -312,7 +313,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'background-opacity': 0.2,
             'border-width': 2,
             'border-color': 'data(color)',
-            'font-size': '11px',
+            'font-size': '13px',
             'font-weight': 600,
             'text-margin-y': 9,
             'underlay-color': 'data(color)',
@@ -343,8 +344,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'background-opacity': 0.04,
             'border-width': 1.5,
             'border-style': 'dashed',
-            'border-color': '#747b6f',
-            color: '#8d9487',
+            'border-color': token('muted'),
+            color: token('muted'),
             'text-background-opacity': 0.72,
           },
         },
@@ -354,8 +355,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             'background-opacity': 0.08,
             'border-width': 2,
             'border-style': 'double',
-            'border-color': '#d6a85f',
-            color: '#d6b77f',
+            'border-color': token('warn'),
+            color: token('warn'),
             'text-background-opacity': 0.82,
           },
         },
@@ -363,7 +364,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'node[selected="yes"]',
           style: {
             'border-width': 3,
-            'border-color': '#f1f6e9',
+            'border-color': token('fg'),
             'underlay-color': 'data(color)',
             'underlay-opacity': 0.16,
             'underlay-padding': 8,
@@ -375,7 +376,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'node.hovered',
           style: {
             'border-width': 3,
-            'border-color': '#f1f6e9',
+            'border-color': token('fg'),
             'underlay-opacity': 0.13,
             'underlay-padding': 7,
             'min-zoomed-font-size': 0,
@@ -385,7 +386,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'node.tap-focused',
           style: {
             'border-width': 4,
-            'border-color': '#ffffff',
+            'border-color': token('fg'),
             'underlay-color': 'data(color)',
             'underlay-opacity': 0.24,
             'underlay-padding': 10,
@@ -396,11 +397,11 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'node.sidebar-hovered',
           style: {
             'border-width': 4,
-            'border-color': '#ffffff',
+            'border-color': token('fg'),
             'underlay-color': 'data(color)',
             'underlay-opacity': 0.34,
             'underlay-padding': 13,
-            'font-size': '11px',
+            'font-size': '13px',
             'font-weight': 700,
             'text-background-opacity': 1,
             'min-zoomed-font-size': 0,
@@ -411,8 +412,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'edge',
           style: {
             width: 1.35,
-            'line-color': '#718066',
-            'target-arrow-color': '#718066',
+            'line-color': token('control'),
+            'target-arrow-color': token('control'),
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             opacity: connectionMode === 'all' ? 0.46 : 0.06,
@@ -445,8 +446,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'edge[type="unresolved"]',
           style: {
             'line-style': 'dashed',
-            'line-color': '#666e62',
-            'target-arrow-color': '#666e62',
+            'line-color': token('control'),
+            'target-arrow-color': token('control'),
             opacity: connectionMode === 'all' ? 0.42 : 0.12,
           },
         },
@@ -454,8 +455,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
           selector: 'edge[type="restricted"]',
           style: {
             'line-style': 'dashed',
-            'line-color': '#a88049',
-            'target-arrow-color': '#a88049',
+            'line-color': token('warn'),
+            'target-arrow-color': token('warn'),
             opacity: connectionMode === 'all' ? 0.58 : 0.16,
           },
         },
@@ -465,9 +466,9 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         {
           selector: '.found',
           style: {
-            'border-color': '#ffffff',
+            'border-color': token('focus'),
             'border-width': 4,
-            'underlay-color': '#ffffff',
+            'underlay-color': token('focus'),
             'underlay-opacity': 0.1,
             'min-zoomed-font-size': 0,
           },
@@ -668,7 +669,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
         <span><i className="note" /> Nota</span>
         <span><i className="index" /> Índice</span>
         <span><i className="pending" /> Sin resolver</span>
-        <span><i className="pending border-amber-400" /> Restringida</span>
+        <span><i className="pending border-warn" /> Restringida</span>
         <span className="legend-divider" />
         <span><b className="link-line" /> Enlace</span>
         <span><b className="area-line" /> Pertenece al área</span>

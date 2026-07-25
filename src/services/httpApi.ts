@@ -1,7 +1,7 @@
 import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Sensitivity, Session } from '../types'
 
 const defaultApiUrl = import.meta.env.DEV ? 'http://localhost:3000/v1' : '/api/v1'
-const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '')
+export const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '')
 
 class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly details?: unknown) { super(message) }
@@ -91,6 +91,13 @@ function mapMember(raw: RawMember): Member {
 let cachedContext: ContextResponse | null = null
 
 export const httpApi = {
+  /**
+   * Same-origin in production (through the /api proxy), so the session cookie rides along and the
+   * dashboard's `img-src 'self'` CSP is satisfied. The endpoint re-checks permissions per request.
+   */
+  assetUrl(id: string): string {
+    return `${API_URL}/knowledge/assets/${id}/raw`
+  },
   async login(email: string, password: string): Promise<Session> {
     await request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
     cachedContext = await request<ContextResponse>('/knowledge/context')

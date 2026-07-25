@@ -25,7 +25,12 @@ function load(): Database {
 
 function persist(db: Database) { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)) }
 
+/** 1x1 transparent PNG: mock mode has no asset storage, so nothing should hit the network. */
+const PLACEHOLDER_ASSET =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+
 export const mockApi = {
+  assetUrl(id: string): string { void id; return PLACEHOLDER_ASSET },
   async login(email: string, password: string): Promise<Session> {
     await delay(420)
     if (!email.includes('@') || password.length < 4) throw new Error('El correo o la contraseña no son válidos.')

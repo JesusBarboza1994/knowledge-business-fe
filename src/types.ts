@@ -1,4 +1,6 @@
 export type AccessLevel = 'read' | 'write' | 'manage'
+/** Vista principal del workspace. Aquí, y no en Workspace, para que los paneles la usen sin ciclo de imports. */
+export type MainView = 'note' | 'graph' | 'admin'
 export type NoteKind = 'note' | 'index' | 'log'
 export type Sensitivity = 'public_org' | 'internal_area' | 'confidential'
 export type UserRole = 'member' | 'admin' | 'superadmin'
