@@ -1,5 +1,5 @@
 import { initialAreas, initialMembers, initialNotes, mockSession } from '../data/mockData'
-import type { Area, DeleteNoteResult, Member, Note, Sensitivity, Session } from '../types'
+import type { Area, DeleteNoteResult, Member, Note, Sensitivity, Session, UploadedAsset } from '../types'
 import { extractWikiLinks } from '../lib/wiki'
 
 const STORAGE_KEY = 'knowledge-hub-mock-state-v1'
@@ -31,6 +31,15 @@ const PLACEHOLDER_ASSET =
 
 export const mockApi = {
   assetUrl(id: string): string { void id; return PLACEHOLDER_ASSET },
+  async uploadAsset(file: File, area: string): Promise<UploadedAsset> {
+    void area
+    await delay(400)
+    const id = Math.random().toString(16).slice(2).padEnd(24, '0').slice(0, 24)
+    return {
+      id, filename: file.name, mime: file.type, size: file.size,
+      ref: `kb:asset/${id}`, markdown: `![${file.name}](kb:asset/${id})`,
+    }
+  },
   async login(email: string, password: string): Promise<Session> {
     await delay(420)
     if (!email.includes('@') || password.length < 4) throw new Error('El correo o la contraseña no son válidos.')

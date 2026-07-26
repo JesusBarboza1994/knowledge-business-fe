@@ -84,3 +84,16 @@ export interface DeleteNoteResult {
   pendingConnections: number
   updatedNotes: number
 }
+
+export interface UploadedAsset {
+  id: string
+  filename: string
+  mime: string
+  size: number
+  width?: number
+  height?: number
+  /** Body reference, `kb:asset/<id>`. Resolved to a real URL only at render time. */
+  ref: string
+  /** Ready to paste into a note body. */
+  markdown: string
+}

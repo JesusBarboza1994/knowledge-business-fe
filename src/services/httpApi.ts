@@ -1,4 +1,4 @@
-import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Sensitivity, Session } from '../types'
+import type { AccessLevel, Area, DeleteNoteResult, Member, Note, NoteVersion, Sensitivity, Session, UploadedAsset } from '../types'
 
 const defaultApiUrl = import.meta.env.DEV ? 'http://localhost:3000/v1' : '/api/v1'
 export const API_URL = (import.meta.env.VITE_API_URL ?? defaultApiUrl).replace(/\/$/, '')
@@ -97,6 +97,25 @@ export const httpApi = {
    */
   assetUrl(id: string): string {
     return `${API_URL}/knowledge/assets/${id}/raw`
+  },
+  /**
+   * Multipart, so it cannot go through `request()`: that helper forces
+   * `Content-Type: application/json`, and setting the header by hand omits the multipart boundary
+   * the browser generates — the server would then parse no fields at all.
+   */
+  async uploadAsset(file: File, area: string, options: { sensitivity?: Sensitivity; visibleTo?: string[] } = {}): Promise<UploadedAsset> {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('area', area)
+    if (options.sensitivity) form.append('sensitivity', options.sensitivity)
+    if (options.visibleTo?.length) form.append('visible_to', options.visibleTo.join(','))
+
+    const response = await fetch(`${API_URL}/knowledge/assets`, { method: 'POST', credentials: 'include', body: form })
+    const payload = await response.json().catch(() => null) as { data?: UploadedAsset; message?: string; details?: unknown } | null
+    if (!response.ok || !payload?.data) {
+      throw new ApiError(payload?.message ?? `HTTP ${response.status}`, response.status, payload?.details)
+    }
+    return payload.data
   },
   async login(email: string, password: string): Promise<Session> {
     await request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })

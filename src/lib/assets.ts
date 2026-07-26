@@ -21,3 +21,19 @@ export function assetIdFromRef(url?: string): string | undefined {
 export function assetUrlTransform(url: string): string {
   return assetIdFromRef(url) ? url : defaultUrlTransform(url);
 }
+
+/**
+ * Transient marker written at the cursor while the bytes upload, replaced by the real reference
+ * when the server answers. It is tracked by its own text rather than by position, so typing
+ * elsewhere during the upload cannot make the replacement land in the wrong place. The `kb:upload/`
+ * scheme is deliberately not whitelisted above: the preview blanks the src and shows the alt text,
+ * which is exactly the "uploading…" message we want the reader to see.
+ */
+export function uploadPlaceholder(filename: string, token: string): string {
+  return `![Subiendo ${filename}…](kb:upload/${token})`;
+}
+
+/** Collision-resistant enough to tell concurrent uploads of the same filename apart. */
+export function uploadToken(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}

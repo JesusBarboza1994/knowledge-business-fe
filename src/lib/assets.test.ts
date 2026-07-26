@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assetIdFromRef, assetUrlTransform } from './assets'
+import { assetIdFromRef, assetUrlTransform, uploadPlaceholder, uploadToken } from './assets'
 
 const id = '6a64f94d70006eebcadf104e'
 
@@ -36,5 +36,19 @@ describe('assetUrlTransform', () => {
     expect(assetUrlTransform('/relativa.png')).toBe('/relativa.png')
     expect(assetUrlTransform('javascript:alert(1)')).toBe('')
     expect(assetUrlTransform('kb:otracosa/123')).toBe('')
+  })
+})
+
+describe('uploadPlaceholder', () => {
+  /** El src queda vacío a propósito: el navegador muestra el alt, que es el mensaje de progreso. */
+  it('deja el nombre del archivo visible mientras sube', () => {
+    expect(uploadPlaceholder('captura.png', 'abc')).toBe('![Subiendo captura.png…](kb:upload/abc)')
+    expect(assetUrlTransform('kb:upload/abc')).toBe('')
+  })
+
+  it('distingue subidas concurrentes del mismo archivo', () => {
+    const first = uploadPlaceholder('captura.png', uploadToken())
+    const second = uploadPlaceholder('captura.png', uploadToken())
+    expect(first).not.toBe(second)
   })
 })

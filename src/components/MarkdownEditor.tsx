@@ -25,7 +25,13 @@ import {
   resolveNoteHref,
   wikiLinkCompletion,
 } from "../lib/wiki";
-import { assetIdFromRef, assetUrlTransform } from "../lib/assets";
+import {
+  assetIdFromRef,
+  assetUrlTransform,
+  uploadPlaceholder,
+  uploadToken,
+} from "../lib/assets";
+import { EditorView } from "@codemirror/view";
 import { api } from "../services/api";
 import type { Area, Note, NoteVersion, Sensitivity } from "../types";
 
@@ -60,8 +66,17 @@ export function MarkdownEditor({
     null,
   );
   const [conflict, setConflict] = useState<Note | null>(null);
+  const [uploading, setUploading] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const baseVersion = useRef(note.version);
   const dirty = useRef(false);
+  /**
+   * CodeMirror extensions are memoized, so a handler defined inside them would capture the first
+   * render's props forever. The extension calls through this ref, which every render refreshes.
+   */
+  const onImagesDropped = useRef<(files: File[], view: EditorView) => boolean>(
+    () => false,
+  );
 
   useEffect(() => {
     setTitle(note.title);
@@ -106,9 +121,25 @@ export function MarkdownEditor({
           })),
       };
     };
+    const handleTransfer = (
+      transfer: DataTransfer | null,
+      view: EditorView,
+    ) => {
+      const images = Array.from(transfer?.files ?? []).filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      if (images.length === 0) return false;
+      return onImagesDropped.current(images, view);
+    };
+
     return [
       markdown(),
       autocompletion({ override: [wikiCompletion], activateOnTyping: true }),
+      // Returning true tells CodeMirror we handled it, which suppresses the default paste/drop.
+      EditorView.domEventHandlers({
+        paste: (event, view) => handleTransfer(event.clipboardData, view),
+        drop: (event, view) => handleTransfer(event.dataTransfer, view),
+      }),
     ];
   }, [notes, areas]);
 
@@ -116,6 +147,48 @@ export function MarkdownEditor({
     dirty.current = true;
     setSaveState("dirty");
   }
+
+  /** Swaps a placeholder for its final text wherever it currently sits in the document. */
+  function replaceText(view: EditorView, find: string, insert: string) {
+    const from = view.state.doc.toString().indexOf(find);
+    if (from < 0) return;
+    view.dispatch({ changes: { from, to: from + find.length, insert } });
+  }
+
+  async function uploadImages(files: File[], view: EditorView) {
+    setUploadError(null);
+    for (const file of files) {
+      const placeholder = uploadPlaceholder(file.name, uploadToken());
+      view.dispatch(view.state.replaceSelection(placeholder));
+      setUploading((count) => count + 1);
+      try {
+        // The asset inherits the note's visibility so an image is never easier to reach
+        // than the note that illustrates it.
+        const asset = await api.uploadAsset(file, note.area, {
+          sensitivity,
+          visibleTo,
+        });
+        replaceText(view, placeholder, asset.markdown);
+      } catch (reason) {
+        replaceText(view, placeholder, "");
+        setUploadError(
+          reason instanceof Error
+            ? reason.message
+            : `No se pudo subir ${file.name}`,
+        );
+      } finally {
+        setUploading((count) => count - 1);
+      }
+    }
+  }
+
+  useEffect(() => {
+    onImagesDropped.current = (files, view) => {
+      if (!canEdit) return false;
+      void uploadImages(files, view);
+      return true;
+    };
+  });
 
   async function save(forceVersion?: number) {
     if (!canEdit || !dirty.current) return;
@@ -150,11 +223,14 @@ export function MarkdownEditor({
 
   useEffect(() => {
     if (!dirty.current || !canEdit) return;
+    // Hold off while an upload is running: otherwise autosave persists the "Subiendo…"
+    // placeholder. Dropping back to zero re-runs this effect and saves the final body.
+    if (uploading > 0) return;
     const timer = window.setTimeout(() => void save(), 1200);
     return () => window.clearTimeout(timer);
     // Inputs intentionally drive autosave; save is stable enough for this local adapter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, body, sensitivity, visibleTo, canEdit]);
+  }, [title, body, sensitivity, visibleTo, canEdit, uploading]);
 
   const status = {
     saved: (
@@ -199,7 +275,16 @@ export function MarkdownEditor({
             className="w-full truncate border-0 bg-transparent p-0 font-display text-lg font-medium text-fg outline-none ring-0 focus:ring-0"
           />
         </div>
-        <div className={`save-status ${saveState}`}>{status}</div>
+        <div className={`save-status ${uploading > 0 ? "saving" : saveState}`}>
+          {uploading > 0 ? (
+            <>
+              <span className="loader small" /> Subiendo{" "}
+              {uploading > 1 ? `${uploading} imágenes` : "imagen"}
+            </>
+          ) : (
+            status
+          )}
+        </div>
         <button
           className="icon-button"
           title="Historial"
@@ -335,6 +420,20 @@ export function MarkdownEditor({
           </article>
         )}
       </div>
+
+      {uploadError && (
+        <div className="flex items-center gap-2 border-t border-line bg-warn/10 px-5 py-2 text-xs text-warn">
+          <TriangleAlert size={13} />
+          <span className="flex-1">{uploadError}</span>
+          <button
+            onClick={() => setUploadError(null)}
+            title="Descartar"
+            className="text-muted hover:text-fg"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
 
       {canEdit && (
         <footer className="editor-settings-footer flex min-h-11 items-center gap-3 border-t border-line px-5 text-xs text-muted">
