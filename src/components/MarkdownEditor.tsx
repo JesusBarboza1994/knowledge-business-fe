@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import {
@@ -13,11 +13,14 @@ import {
   Columns2,
   Eye,
   FileClock,
+  Minus,
   Pencil,
+  Plus,
   Save,
   SlidersHorizontal,
   TriangleAlert,
   X,
+  ZoomIn,
 } from "lucide-react";
 import {
   markdownWithWikiLinks,
@@ -36,6 +39,21 @@ import { api } from "../services/api";
 import type { Area, Note, NoteVersion, Sensitivity } from "../types";
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
+
+/**
+ * Nivel de zoom de lectura: una sola palanca que sube tamaño de letra y, como
+ * --measure está en `ch`, el ancho del bloque. Se guarda en localStorage para
+ * que la preferencia se mantenga entre todas las notas.
+ */
+const READING_ZOOM_KEY = "kb-reading-scale";
+const READING_ZOOM_MIN = 1;
+const READING_ZOOM_MAX = 1.8;
+const READING_ZOOM_STEP = 0.1;
+
+function readStoredZoom(): number {
+  const stored = Number(localStorage.getItem(READING_ZOOM_KEY));
+  return stored >= READING_ZOOM_MIN && stored <= READING_ZOOM_MAX ? stored : 1;
+}
 
 interface Props {
   note: Note;
@@ -59,6 +77,7 @@ export function MarkdownEditor({
   const [sensitivity, setSensitivity] = useState<Sensitivity>(note.sensitivity);
   const [visibleTo, setVisibleTo] = useState(note.visibleTo);
   const [mode, setMode] = useState<"edit" | "split" | "preview">("preview");
+  const [readingScale, setReadingScale] = useState(readStoredZoom);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -96,6 +115,17 @@ export function MarkdownEditor({
     note.visibleTo,
     canEdit,
   ]);
+
+  useEffect(() => {
+    localStorage.setItem(READING_ZOOM_KEY, String(readingScale));
+  }, [readingScale]);
+
+  function adjustZoom(delta: number) {
+    setReadingScale((current) => {
+      const next = Math.round((current + delta) * 100) / 100;
+      return Math.min(READING_ZOOM_MAX, Math.max(READING_ZOOM_MIN, next));
+    });
+  }
 
   const extensions = useMemo(() => {
     const wikiCompletion = (context: CompletionContext) => {
@@ -366,8 +396,38 @@ export function MarkdownEditor({
           </div>
         )}
         {mode !== "edit" && (
-          <article className="markdown-body overflow-auto px-7 py-8 lg:px-10">
-            <ReactMarkdown
+          <div className="reading-pane">
+            <div className="reading-zoom">
+              <button
+                type="button"
+                aria-label="Reducir tamaño de lectura"
+                title="Reducir"
+                onClick={() => adjustZoom(-READING_ZOOM_STEP)}
+                disabled={readingScale <= READING_ZOOM_MIN + 0.001}
+              >
+                <Minus size={14} />
+              </button>
+              <span className="reading-zoom-value">
+                <ZoomIn size={13} />
+                {Math.round(readingScale * 100)}%
+              </span>
+              <button
+                type="button"
+                aria-label="Ampliar tamaño de lectura"
+                title="Ampliar"
+                onClick={() => adjustZoom(READING_ZOOM_STEP)}
+                disabled={readingScale >= READING_ZOOM_MAX - 0.001}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <article
+              className="markdown-body px-7 py-8 lg:px-10"
+              style={
+                { "--reading-scale": readingScale } as CSSProperties
+              }
+            >
+              <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               urlTransform={assetUrlTransform}
               components={{
@@ -416,8 +476,9 @@ export function MarkdownEditor({
               }}
             >
               {markdownWithWikiLinks(body)}
-            </ReactMarkdown>
-          </article>
+              </ReactMarkdown>
+            </article>
+          </div>
         )}
       </div>
 

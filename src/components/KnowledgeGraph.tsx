@@ -16,6 +16,7 @@ interface KnowledgeGraphProps {
 
 export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, onOpenNote }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const areaPickerRef = useRef<HTMLDetailsElement>(null)
   const cyRef = useRef<Core | null>(null)
   const focusedSlugRef = useRef<string | undefined>(undefined)
   const [scope, setScope] = useState<'local' | 'selection' | 'all'>('selection')
@@ -56,10 +57,11 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       return includeSelectionConnection(selectedAreaKeys, source, target)
     }
 
+    // Solo conexiones entrantes: cuántas otras notas enlazan a esta nota.
     visible.forEach((note) => {
       linksByNote.get(note.slug)?.forEach((link) => {
         if (!link.target || !visibleSlugs.has(link.target.slug) || !includeConnection(note, link.target)) return
-        degrees.set(note.slug, (degrees.get(note.slug) ?? 0) + 1)
+        if (link.target.slug === note.slug) return
         degrees.set(link.target.slug, (degrees.get(link.target.slug) ?? 0) + 1)
       })
     })
@@ -84,8 +86,8 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
       const color = areas.find((area) => area.key === note.area)?.color ?? token('accent')
       const isSelected = note.id === selectedNote?.id
       const degree = degrees.get(note.slug) ?? 0
-      const baseSize = note.kind === 'index' ? 19 : note.kind === 'log' ? 16 : 13
-      const size = Math.min(baseSize + degree * 1.15 + (isSelected ? 2 : 0), 25)
+      const baseSize = note.kind === 'index' ? 15 : note.kind === 'log' ? 13 : 11
+      const size = Math.min(baseSize + degree * 3.4 + (isSelected ? 2 : 0), 48)
       const rank = isSelected ? (scope === 'local' ? 100 : 88) : note.kind === 'index' ? 76 : 56
 
       result.push({
@@ -574,6 +576,17 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
     if (found.length) cy.animate({ fit: { eles: found, padding: 150 }, duration: 240 })
   }, [query])
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const picker = areaPickerRef.current
+      if (picker?.open && !picker.contains(event.target as Node)) {
+        picker.open = false
+      }
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [])
+
   const zoomBy = (amount: number) => {
     const cy = cyRef.current
     if (!cy) return
@@ -610,7 +623,7 @@ export function KnowledgeGraph({ notes, areas, selectedNote, hoveredNoteSlug, on
             {stats.pending > 0 && <span className="graph-count pending">{stats.pending} pendientes</span>}
           </div>
         </div>
-        <details className="graph-area-picker">
+        <details className="graph-area-picker" ref={areaPickerRef}>
           <summary>
             <Layers3 size={13} />
             Áreas
