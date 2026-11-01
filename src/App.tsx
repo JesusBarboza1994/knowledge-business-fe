@@ -94,15 +94,22 @@ function SessionGate({ session, onLogin, onLogout }: {
     )
   }
 
-  if (location.pathname === '/conectar-claude') return <ConnectClaudePage />
-
+  // Workspace guarda notas y borradores en estado local: desmontarlo para mostrar otra página
+  // perdería lo no guardado y volvería con versiones viejas (409 al guardar). Por eso sigue montado
+  // y la página de conexión se pinta encima.
+  const connecting = location.pathname === '/conectar-claude'
   return (
-    <Workspace
-      session={session}
-      initialAreas={areas.data ?? []}
-      initialNotes={notes.data ?? []}
-      initialMembers={members.data ?? []}
-      onLogout={() => { void api.logout().finally(() => { queryClient.clear(); onLogout() }) }}
-    />
+    <>
+      <div aria-hidden={connecting || undefined} inert={connecting || undefined}>
+        <Workspace
+          session={session}
+          initialAreas={areas.data ?? []}
+          initialNotes={notes.data ?? []}
+          initialMembers={members.data ?? []}
+          onLogout={() => { void api.logout().finally(() => { queryClient.clear(); onLogout() }) }}
+        />
+      </div>
+      {connecting && <div className="fixed inset-0 z-50 overflow-auto"><ConnectClaudePage /></div>}
+    </>
   )
 }

@@ -57,7 +57,7 @@ export function ConnectClaude({ compact = false }: { compact?: boolean }) {
           {steps.map((step, index) => (
             <li key={step} className="flex gap-3 text-sm leading-6 text-fg-2">
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line text-xs text-muted">{index + 1}</span>
-              <span><Trans t={t} i18nKey={`steps.${step}`} values={{ product }} components={{ strong: <strong className="font-medium text-fg" /> }} /></span>
+              <span><Trans t={t} i18nKey={`steps.${step}`} values={{ product }} components={{ strong: <strong className="font-medium text-fg" />, em: <em className="text-muted" /> }} /></span>
             </li>
           ))}
         </ol>

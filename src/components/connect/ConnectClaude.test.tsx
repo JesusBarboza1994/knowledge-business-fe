@@ -12,7 +12,8 @@ describe('ConnectClaude', () => {
     render(<ConnectClaude />)
 
     expect(await screen.findByDisplayValue('https://api.example.com/mcp')).toBeInTheDocument()
-    expect(screen.getByText(/Agregar conector personalizado/)).toBeInTheDocument()
+    expect(screen.getByText('Agregar conector personalizado')).toBeInTheDocument()
+    expect(screen.getByText('Add custom connector')).toBeInTheDocument()
     expect(screen.getAllByText(/Knowledge Hub/).length).toBeGreaterThan(0)
     expect(screen.getByText(/No necesitas copiar ningún token/)).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/steps\.\w+/)
