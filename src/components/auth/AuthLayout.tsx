@@ -8,13 +8,14 @@ import { BrandMark } from '../BrandMark'
  */
 export function AuthLayout({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const { t } = useTranslation('auth')
+  const { t: tc } = useTranslation('common')
   return (
     <main className="login-grid login-screen min-h-screen overflow-hidden bg-ink text-fg">
       <section className="login-argument hidden lg:grid">
         <div className="login-brand">
           <BrandMark className="h-10 w-10" />
           <div>
-            <div className="wordmark">Knowvault</div>
+            <div className="wordmark">{tc('productName')}</div>
             <div className="text-xs text-muted">{t('login.tagline')}</div>
           </div>
         </div>
@@ -37,7 +38,7 @@ export function AuthLayout({ children, wide = false }: { children: ReactNode; wi
           <div className="login-mobile-brand mb-10 flex items-center gap-3 lg:hidden">
             <BrandMark className="h-11 w-11" />
             <div>
-              <span className="wordmark block">Knowvault</span>
+              <span className="wordmark block">{tc('productName')}</span>
               <span className="text-xs text-muted">{t('login.tagline')}</span>
             </div>
           </div>
