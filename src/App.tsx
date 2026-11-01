@@ -4,10 +4,12 @@ import { Workspace } from './components/Workspace'
 import { api } from './services/api'
 import type { Session } from './types'
 import { LoginPage } from './pages/LoginPage'
+import { useTranslation } from 'react-i18next'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
 
   const scope = session?.userId
   const areas = useQuery({ queryKey: ['areas', scope], queryFn: api.getAreas, enabled: Boolean(session) })
@@ -24,7 +26,7 @@ export default function App() {
   }, [])
 
   if (session === undefined) {
-    return <div className="grid min-h-screen place-items-center bg-ink text-fg"><div className="flex items-center gap-3 text-sm text-muted"><span className="loader" /> Verificando sesión…</div></div>
+    return <div className="grid min-h-screen place-items-center bg-ink text-fg"><div className="flex items-center gap-3 text-sm text-muted"><span className="loader" /> {t('loading.session')}</div></div>
   }
 
   if (!session) return <LoginPage onLogin={startSession} />
@@ -32,7 +34,7 @@ export default function App() {
   if (areas.isLoading || notes.isLoading || members.isLoading) {
     return (
       <div className="grid min-h-screen place-items-center bg-ink text-fg">
-        <div className="flex items-center gap-3 text-sm text-muted"><span className="loader" /> Preparando tu conocimiento…</div>
+        <div className="flex items-center gap-3 text-sm text-muted"><span className="loader" /> {t('loading.workspace')}</div>
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { api } from '../services/api'
 import type { Session } from '../types'
 import { BrandMark } from '../components/BrandMark'
+import { useTranslation } from 'react-i18next'
 
 export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) {
   const [email, setEmail] = useState('')
@@ -10,11 +11,12 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { t } = useTranslation('auth')
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setLoading(true); setError('')
     try { onLogin(await api.login(email, password)) }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo iniciar sesión.') }
+    catch (reason) { setError(reason instanceof Error ? reason.message : t('login.failed')) }
     finally { setLoading(false) }
   }
 
@@ -25,22 +27,19 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
           <BrandMark className="h-10 w-10" />
           <div>
             <div className="wordmark">Knowvault</div>
-            <div className="text-xs text-muted">MenteMente</div>
+            <div className="text-xs text-muted">{t('login.tagline')}</div>
           </div>
         </div>
 
         <ConnectionDiagram />
 
         <div className="login-block">
-          <h1 className="text-balance">Las ideas valen más cuando ves cómo se conectan.</h1>
-          <p>
-            Explora la memoria de tu organización, escribe en Markdown y descubre
-            las relaciones que hacen visible el conocimiento.
-          </p>
+          <h1 className="text-balance">{t('login.headline')}</h1>
+          <p>{t('login.pitch')}</p>
           <div className="login-facts">
-            <span>Acceso por áreas</span>
-            <span>Markdown portable</span>
-            <span>Historial de versiones</span>
+            <span>{t('login.facts.areas')}</span>
+            <span>{t('login.facts.markdown')}</span>
+            <span>{t('login.facts.history')}</span>
           </div>
         </div>
       </section>
@@ -51,31 +50,31 @@ export function LoginPage({ onLogin }: { onLogin: (session: Session) => void }) 
             <BrandMark className="h-11 w-11" />
             <div>
               <span className="wordmark block">Knowvault</span>
-              <span className="text-xs text-muted">MenteMente</span>
+              <span className="text-xs text-muted">{t('login.tagline')}</span>
             </div>
           </div>
-          <h2 className="font-display text-xl font-medium">Entra a tu organización</h2>
-          <p className="mt-3 text-sm leading-6 text-muted">Tu organización y tus áreas se cargarán automáticamente.</p>
+          <h2 className="font-display text-xl font-medium">{t('login.title')}</h2>
+          <p className="mt-3 text-sm leading-6 text-muted">{t('login.subtitle')}</p>
           <form className="mt-9 space-y-5" onSubmit={submit}>
             <label className="block">
-              <span className="field-label">Correo de trabajo</span>
-              <input className="field" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="nombre@empresa.com" />
+              <span className="field-label">{t('login.emailLabel')}</span>
+              <input className="field" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={t('login.emailPlaceholder')} />
             </label>
             <label className="block">
-              <span className="field-label">Contraseña</span>
+              <span className="field-label">{t('login.passwordLabel')}</span>
               <span className="relative block">
-                <input className="field pr-12" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="Tu contraseña" />
-                <button type="button" className="password-toggle absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center text-muted hover:text-fg" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                <input className="field pr-12" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder={t('login.passwordPlaceholder')} />
+                <button type="button" className="password-toggle absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center text-muted hover:text-fg" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}>
                   {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
               </span>
             </label>
             {error && <p className="rounded-md border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
             <button className="login-submit primary-button group w-full" disabled={loading}>
-              {loading ? <span className="loader dark" /> : <>Continuar <ArrowRight size={17} /></>}
+              {loading ? <span className="loader dark" /> : <>{t('login.submit')} <ArrowRight size={17} /></>}
             </button>
           </form>
-          <p className="mt-6 text-center text-xs text-muted">Acceso seguro a tu espacio de conocimiento</p>
+          <p className="mt-6 text-center text-xs text-muted">{t('login.secureNote')}</p>
         </div>
       </section>
     </main>
