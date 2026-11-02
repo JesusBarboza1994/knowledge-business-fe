@@ -53,3 +53,31 @@ export const accountApi = {
 export function errorCode(reason: unknown): string | undefined {
   return reason instanceof AccountApiError ? reason.code : undefined
 }
+
+export interface CurrentOrganization {
+  slug: string
+  name: string
+  plan: string
+  /** `null` = el asistente de configuración no se ha terminado; ausente = organización previa. */
+  onboarding_completed_at?: string | null
+}
+
+export interface ConnectInfo { product_name: string; mcp_url: string; auth: 'oauth' }
+
+export const organizationApi = {
+  current: () => request<CurrentOrganization>('/organizations/current'),
+  completeOnboarding: () => post<CurrentOrganization>('/organizations/current/onboarding/complete', {}),
+  connectInfo: () => request<ConnectInfo>('/organizations/current/connect'),
+}
+
+export interface InviteInput {
+  email: string
+  name: string
+  role: 'member' | 'admin'
+  memberships: Array<{ area: string; access: 'read' | 'write' | 'manage' }>
+}
+
+/** Igual que invitar desde Administrar, pero conserva `invitation_sent` para avisar si el correo falló. */
+export const inviteApi = {
+  invite: (input: InviteInput) => post<{ _id: string; email: string; invitation_sent: boolean }>('/users/invite', input),
+}

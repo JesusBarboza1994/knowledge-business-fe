@@ -1,6 +1,6 @@
 export const auth = {
   login: {
-    tagline: 'MenteMente',
+    tagline: 'La memoria de tu organización',
     headline: 'Las ideas valen más cuando ves cómo se conectan.',
     pitch:
       'Explora la memoria de tu organización, escribe en Markdown y descubre las relaciones que hacen visible el conocimiento.',
