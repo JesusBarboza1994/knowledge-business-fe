@@ -1,0 +1,25 @@
+export const connect = {
+  title: 'Conectar con Claude',
+  subtitle: 'Usa {{product}} desde Claude: busca, consulta y guarda conocimiento de tu organización conversando.',
+  back: 'Volver a mi espacio',
+  urlLabel: 'URL del conector',
+  copy: 'Copiar',
+  copied: 'Copiada',
+  loading: 'Cargando datos de conexión…',
+  failed: 'No pudimos obtener la URL de conexión. Inténtalo de nuevo más tarde.',
+  stepsTitle: 'Cómo conectarlo',
+  steps: {
+    open: 'En Claude (web o escritorio), abre <strong>Configuración → Conectores</strong> (<em>Settings → Connectors</em>). En algunas versiones está en <strong>Personalizar → Conectores</strong>.',
+    add: 'Elige <strong>Agregar conector personalizado</strong> (<em>Add custom connector</em>), ponle de nombre <strong>{{product}}</strong>, pega la URL de arriba y confirma.',
+    login: 'Pulsa <strong>Conectar</strong> (<em>Connect</em>). Se abrirá el inicio de sesión de {{product}}: entra con tu correo y contraseña.',
+    use: 'En cada conversación, activa {{product}} desde el menú <strong>+</strong> de herramientas.',
+  },
+  noToken: 'No necesitas copiar ningún token: Claude usa tu inicio de sesión y solo ve lo que tus áreas te permiten.',
+  teamNote: 'En los planes Team y Enterprise de Claude, el owner de tu espacio de Claude agrega el conector en Configuración de la organización → Conectores; después cada persona solo pulsa Conectar. En el plan gratuito de Claude se permite un solo conector personalizado.',
+  examplesTitle: 'Prueba a pedirle',
+  examples: [
+    '¿Qué sabemos sobre el proceso de templado de resortes?',
+    'Resume las notas del área de Ventas actualizadas esta semana.',
+    'Guarda este procedimiento como una nota nueva en Operaciones.',
+  ],
+} as const

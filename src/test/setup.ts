@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import '../i18n'
 
 /**
  * Testing Library only auto-cleans when Vitest runs with `globals: true`, which this project does
