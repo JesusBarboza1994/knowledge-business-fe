@@ -7,11 +7,13 @@ import {
   GitGraph,
   LayoutPanelLeft,
   LogOut,
+  Plug,
   Search,
   Settings2,
   Shield,
   X,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { BrandMark } from './BrandMark'
 import type { Area, MainView, Note, Session } from '../types'
 
@@ -61,7 +63,7 @@ export function SidebarPanel({
       <div className="flex min-h-[62px] items-center gap-3 border-b border-line px-4">
         <BrandMark className="h-8 w-8" />
         <div className="min-w-0 flex-1">
-          <strong className="wordmark block truncate text-sm">KnowHub</strong>
+          <strong className="wordmark block truncate text-sm">Knowledge Hub</strong>
           <span className="block truncate text-xs text-muted">{session.organizationName}</span>
         </div>
         <button className="icon-button lg:hidden" aria-label="Cerrar explorador" onClick={onCloseMobile}>
@@ -147,6 +149,9 @@ export function SidebarPanel({
         </div>
 
         <div className="border-t border-line p-2">
+          <Link className="bottom-nav" to="/conectar-claude">
+            <Plug size={15} /> Conectar con Claude
+          </Link>
           {session.role !== 'member' && (
             <button className={`bottom-nav ${view === 'admin' ? 'active' : ''}`} onClick={() => onViewChange('admin')}>
               <Settings2 size={15} /> Administrar organización

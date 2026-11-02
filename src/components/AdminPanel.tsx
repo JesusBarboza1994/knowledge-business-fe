@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Check, ChevronDown, CirclePlus, FolderKanban, MailPlus, MoreHorizontal, Shield, Users } from 'lucide-react'
 import { api } from '../services/api'
+import { accountApi } from '../services/accountApi'
+import { useTranslation } from 'react-i18next'
 import type { AccessLevel, Area, Member, Sensitivity, UserRole, UserStatus } from '../types'
 
 type AdminSection = 'people' | 'areas'
@@ -191,6 +193,7 @@ function PeopleSection({ currentUserId, members, areas, selected, onSelect, onSa
               </div>
               {error && <p className="mb-4 rounded-lg border border-danger/25 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
               {protectsIdentity && <p className="mb-4 rounded-lg border border-warn/25 bg-warn/10 px-3 py-2 text-xs leading-5 text-warn">{selected.role === 'superadmin' ? 'El rol y estado de un superadministrador no se modifican desde esta consola.' : 'Para evitar perder acceso, no puedes cambiar tu propio rol ni desactivar tu cuenta.'}</p>}
+              {selected.status === 'invited' && <PendingInvitation memberId={selected.id} />}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label><span className="field-label">Rol</span><select className="field" value={selected.role} disabled={protectsIdentity || saving} onChange={(event) => void updateMember({ role: event.target.value as UserRole })}><option value="member">Miembro</option><option value="admin">Administrador</option>{selected.role === 'superadmin' && <option value="superadmin">Superadministrador</option>}</select></label>
                 <label><span className="field-label">Estado</span><select className="field" value={selected.status} disabled={protectsIdentity || saving} onChange={(event) => void updateMember({ status: event.target.value as UserStatus })}><option value="active">Activo</option><option value="invited">Invitado</option><option value="inactive">Inactivo</option></select></label>
@@ -215,6 +218,36 @@ function PeopleSection({ currentUserId, members, areas, selected, onSelect, onSa
           </>
         ) : <div className="p-8 text-center text-sm text-muted">No hay personas para administrar.</div>}
       </section>
+    </div>
+  )
+}
+
+function PendingInvitation({ memberId }: { memberId: string }) {
+  const { t } = useTranslation('account')
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+
+  useEffect(() => setState('idle'), [memberId])
+
+  async function resend() {
+    setState('sending')
+    try {
+      const result = await accountApi.resendInvitation(memberId)
+      setState(result.invitation_sent ? 'sent' : 'failed')
+    } catch {
+      setState('failed')
+    }
+  }
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-sunken px-3 py-2 text-xs text-fg-2">
+      <span>{t('admin.pendingInvitation')}</span>
+      <span className="flex items-center gap-2">
+        {state === 'sent' && <span className="flex items-center gap-1 text-accent" role="status"><Check size={13} /> {t('admin.invitationResent')}</span>}
+        {state === 'failed' && <span className="text-danger" role="alert">{t('admin.invitationFailed')}</span>}
+        <button type="button" className="secondary-button h-8 px-3 text-xs" onClick={() => void resend()} disabled={state === 'sending'}>
+          {state === 'sending' ? <span className="loader small" /> : <><MailPlus size={13} /> {t('admin.resendInvitation')}</>}
+        </button>
+      </span>
     </div>
   )
 }
@@ -304,7 +337,7 @@ function InviteDialog({ areas, onClose, onInvite }: { areas: Area[]; onClose: ()
     }
   }
 
-  return <div className="modal-backdrop"><form className="modal-card invite-modal max-w-md p-6" onSubmit={submit}><p className="eyebrow">Nueva invitación</p><h2 className="mt-1 text-lg font-medium">Invitar a la organización</h2><div className="mt-6 space-y-4">{error && <p className="rounded-lg border border-danger/25 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}<label className="block"><span className="field-label">Nombre</span><input className="field" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre de la persona" /></label><label className="block"><span className="field-label">Correo</span><input className="field" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="persona@empresa.com" /></label><label className="block"><span className="field-label">Rol</span><select className="field" value={role} onChange={(event) => setRole(event.target.value as 'member' | 'admin')}><option value="member">Miembro</option><option value="admin">Administrador</option></select></label><div className="invite-fields grid grid-cols-2 gap-3"><label><span className="field-label">Área inicial</span><select className="field" value={area} onChange={(event) => setArea(event.target.value)}>{areas.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select></label><label><span className="field-label">Acceso</span><select className="field" value={access} onChange={(event) => setAccess(event.target.value as AccessLevel)}><option value="read">Lectura</option><option value="write">Escritura</option><option value="manage">Administración</option></select></label></div></div><div className="modal-actions mt-6 flex justify-end gap-3"><button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button><button className="primary-button" disabled={!name.trim() || !email.includes('@') || saving}>{saving ? <span className="loader dark small" /> : 'Crear invitación'}</button></div></form></div>
+  return <div className="modal-backdrop"><form className="modal-card invite-modal max-w-md p-6" onSubmit={submit}><p className="eyebrow">Nueva invitación</p><h2 className="mt-1 text-lg font-medium">Invitar a la organización</h2><div className="mt-6 space-y-4">{error && <p className="rounded-lg border border-danger/25 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}<label className="block"><span className="field-label">Nombre</span><input className="field" autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre de la persona" /></label><label className="block"><span className="field-label">Correo</span><input className="field" type="email" inputMode="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="persona@empresa.com" /></label><label className="block"><span className="field-label">Rol</span><select className="field" value={role} onChange={(event) => setRole(event.target.value as 'member' | 'admin')}><option value="member">Miembro</option><option value="admin">Administrador</option></select></label><div className="invite-fields grid grid-cols-2 gap-3"><label><span className="field-label">Área inicial</span><select className="field" value={area} onChange={(event) => setArea(event.target.value)}>{areas.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select></label><label><span className="field-label">Acceso</span><select className="field" value={access} onChange={(event) => setAccess(event.target.value as AccessLevel)}><option value="read">Lectura</option><option value="write">Escritura</option><option value="manage">Administración</option></select></label></div></div><div className="modal-actions mt-6 flex justify-end gap-3"><button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button><button className="primary-button" disabled={!name.trim() || !email.includes('@') || saving}>{saving ? <span className="loader dark small" /> : 'Enviar invitación'}</button></div></form></div>
 }
 
 function CreateAreaDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (input: { key: string; name: string; description: string; defaultSensitivity: Sensitivity }) => Promise<void> }) {
