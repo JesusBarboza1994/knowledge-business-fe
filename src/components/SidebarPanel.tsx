@@ -63,7 +63,7 @@ export function SidebarPanel({
       <div className="flex min-h-[62px] items-center gap-3 border-b border-line px-4">
         <BrandMark className="h-8 w-8" />
         <div className="min-w-0 flex-1">
-          <strong className="wordmark block truncate text-sm">Knowledge Hub</strong>
+          <strong className="wordmark block truncate text-sm">NoesisHub</strong>
           <span className="block truncate text-xs text-muted">{session.organizationName}</span>
         </div>
         <button className="icon-button lg:hidden" aria-label="Cerrar explorador" onClick={onCloseMobile}>

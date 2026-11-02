@@ -47,7 +47,7 @@ export const initialNotes: Note[] = [
     sensitivity: 'internal_area', visibleTo: ['develop'], version: 5, updatedAt: now, updatedBy: 'Jesús Barboza', archived: false,
     body: `# Desarrollo
 
-Punto de entrada para la arquitectura y los flujos técnicos de Knowledge Hub.
+Punto de entrada para la arquitectura y los flujos técnicos de NoesisHub.
 
 ## Fundamentos
 - [[Arquitectura actual]] — componentes y responsabilidades principales.
@@ -68,7 +68,7 @@ Punto de entrada para la arquitectura y los flujos técnicos de Knowledge Hub.
     sensitivity: 'public_org', visibleTo: [], version: 3, updatedAt: '2026-07-22T12:20:00.000Z', updatedBy: 'Ana Torres',
     body: `# Arquitectura actual
 
-Knowledge Hub está compuesto por un servicio **NestJS**, MongoDB para persistencia y una interfaz MCP para clientes inteligentes.
+NoesisHub está compuesto por un servicio **NestJS**, MongoDB para persistencia y una interfaz MCP para clientes inteligentes.
 
 ## Componentes
 
@@ -131,7 +131,7 @@ Los enlaces a [[Notas que todavía no existen]] se conservan como pendientes y a
 
 - 2026-07-18 NOTE: se documentó [[Arquitectura actual]].
 - 2026-07-20 NOTE: se añadió [[Grafo de enlaces]].
-- 2026-07-22 NOTE: se inició el frontend de Knowledge Hub.`,
+- 2026-07-22 NOTE: se inició el frontend de NoesisHub.`,
     versions: [],
   },
   {
@@ -140,7 +140,7 @@ Los enlaces a [[Notas que todavía no existen]] se conservan como pendientes y a
     body: `# Producto
 
 ## Visión
-- [[Knowledge Hub]]
+- [[NoesisHub]]
 - [[Experiencia de edición]]
 - [[Navegación por conocimiento]]
 
@@ -149,9 +149,9 @@ Los enlaces a [[Notas que todavía no existen]] se conservan como pendientes y a
     versions: [],
   },
   {
-    id: 'n-hub', area: 'product', slug: 'knowledge-hub', title: 'Knowledge Hub', kind: 'note',
+    id: 'n-hub', area: 'product', slug: 'noesishub', title: 'NoesisHub', kind: 'note',
     sensitivity: 'public_org', visibleTo: [], version: 6, updatedAt: '2026-07-22T11:05:00.000Z', updatedBy: 'María Luna',
-    body: `# Knowledge Hub
+    body: `# NoesisHub
 
 Un espacio compartido para capturar, conectar y mantener el conocimiento vivo de una organización.
 

@@ -1,4 +1,4 @@
-# Design — KnowHub
+# Design — NoesisHub
 
 Sistema de diseño bloqueado para esta app. Cualquier rediseño de pantalla lee
 este archivo antes de emitir código. No se regenera por pantalla: se extiende o
@@ -202,7 +202,7 @@ Pendiente del audit (fuera del alcance de esta pasada):
 
 - Podar los rótulos en versalitas del chrome (quedan ~20; el objetivo es 2).
 - Estados 8/8 por componente interactivo.
-- Nombre de producto único (conviven Knowvault / KnowHub / Know Hub).
+- ~~Nombre de producto único~~: resuelto, el producto se llama NoesisHub.
 - Archivado optimista con deshacer en lugar del modal de confirmación.
 
 ## Exports

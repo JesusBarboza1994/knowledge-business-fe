@@ -448,7 +448,7 @@ export function Workspace({
               <LogOut size={18} />
               <span>
                 <strong>Cerrar sesión</strong>
-                <small>Salir de Knowledge Hub</small>
+                <small>Salir de NoesisHub</small>
               </span>
             </button>
           </section>

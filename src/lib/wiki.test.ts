@@ -75,7 +75,7 @@ describe('wiki helpers', () => {
   })
 
   it('deduplica enlaces por título', () => {
-    expect(uniqueLinks(extractWikiLinks('[[Knowledge Hub]] [[Knowledge Hub]]', initialNotes))).toHaveLength(1)
+    expect(uniqueLinks(extractWikiLinks('[[NoesisHub]] [[NoesisHub]]', initialNotes))).toHaveLength(1)
   })
 
   it('convierte wikilinks para el renderer Markdown', () => {

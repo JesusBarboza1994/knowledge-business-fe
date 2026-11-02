@@ -1,4 +1,4 @@
-# Knowledge Hub Frontend
+# NoesisHub Frontend
 
 MVP en React, TypeScript y Tailwind para navegar, editar y conectar notas Markdown por organización y área.
 
