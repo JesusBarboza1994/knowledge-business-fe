@@ -13,11 +13,13 @@ import {
   Network,
   PanelRightClose,
   PanelRightOpen,
+  Plug,
   Settings2,
   Trash2,
   X,
 } from "lucide-react";
 import { AdminPanel } from "./AdminPanel";
+import { Link } from "react-router-dom";
 import { KnowledgeGraph } from "./KnowledgeGraph";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { extractNoteLinks, uniqueLinks } from "../lib/wiki";
@@ -435,11 +437,18 @@ export function Workspace({
                 </span>
               </button>
             )}
+            <Link className="mobile-sheet-action" to="/conectar-claude">
+              <Plug size={18} />
+              <span>
+                <strong>Conectar con Claude</strong>
+                <small>Usa tu conocimiento desde Claude</small>
+              </span>
+            </Link>
             <button className="mobile-sheet-action danger" onClick={onLogout}>
               <LogOut size={18} />
               <span>
                 <strong>Cerrar sesión</strong>
-                <small>Salir de Knowvault</small>
+                <small>Salir de Knowledge Hub</small>
               </span>
             </button>
           </section>
