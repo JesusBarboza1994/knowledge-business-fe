@@ -15,7 +15,7 @@ describe('OnboardingWizard', () => {
   it('recorre los tres pasos: crea el área, invita y termina en Conectar con Claude', async () => {
     const createArea = vi.spyOn(api, 'createArea').mockResolvedValue(area)
     const invite = vi.spyOn(inviteApi, 'invite').mockResolvedValue({ _id: 'x', email: 'luis@acme.com', invitation_sent: true })
-    vi.spyOn(organizationApi, 'connectInfo').mockResolvedValue({ product_name: 'Knowledge Hub', mcp_url: 'https://api.example.com/mcp', auth: 'oauth' })
+    vi.spyOn(organizationApi, 'connectInfo').mockResolvedValue({ product_name: 'NoesisHub', mcp_url: 'https://api.example.com/mcp', auth: 'oauth' })
     const complete = vi.spyOn(organizationApi, 'completeOnboarding').mockResolvedValue({ slug: 'acme', name: 'Acme', plan: 'free', onboarding_completed_at: '2026-11-01' })
     const onFinish = vi.fn()
     const user = userEvent.setup()
@@ -42,7 +42,7 @@ describe('OnboardingWizard', () => {
   })
 
   it('si ya hay un área retoma en el paso de invitar, y se puede omitir', async () => {
-    vi.spyOn(organizationApi, 'connectInfo').mockResolvedValue({ product_name: 'Knowledge Hub', mcp_url: 'https://api.example.com/mcp', auth: 'oauth' })
+    vi.spyOn(organizationApi, 'connectInfo').mockResolvedValue({ product_name: 'NoesisHub', mcp_url: 'https://api.example.com/mcp', auth: 'oauth' })
     const user = userEvent.setup()
     render(<OnboardingWizard session={session} areas={[area]} onFinish={vi.fn()} />)
 

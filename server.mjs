@@ -108,5 +108,5 @@ createServer(async (request, response) => {
     response.writeHead(500).end('Internal server error')
   }
 }).listen(port, '0.0.0.0', () => {
-  console.log(`Knowledge Hub frontend listening on ${port}`)
+  console.log(`NoesisHub frontend listening on ${port}`)
 })

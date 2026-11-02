@@ -1,5 +1,5 @@
 export const common = {
-  productName: 'Knowledge Hub',
+  productName: 'NoesisHub',
   connectClaude: 'Conectar con Claude',
   connectClaudeHint: 'Usa tu conocimiento desde Claude',
   loading: {
